@@ -1,0 +1,818 @@
+#!/bin/sh
+# -*- coding: utf-8; mode: sh; tab-width: 4 -*-
+# -------------------------------------------------------------------------- #
+# This file is part of Tinytium.											 #
+#																			 #
+# Tinytium is free software: you can redistribute it and/or modify it under	 #
+# the terms of the GNU General Public License as published by the Free		 #
+# Software Foundation, either version 3 of the License, or (at your option)	 #
+# any later version.														 #
+#																			 #
+# Tinytium is distributed in the hope that it will be useful, but WITHOUT	 #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or		 #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for	 #
+# more details.																 #
+#																			 #
+# You should have received a copy of the GNU General Public License along	 #
+# with Tinytium. If not, see <http://www.gnu.org/licenses/>.				 #
+# -------------------------------------------------------------------------- #
+# Image generation script for        _____ _              _   _				 #
+# Tinytium.                         |_   _|_)____  _   __| |_(_)_   _ ____	 #
+#                                     | | | |  _ \| | | |   _| | | | |    \	 #
+# It doesn't make assumptions on      | | | | | \ | \_/ || |_| | \_| | | | | #
+# what/who invoked it; will use       |_| |_|_| |_|\__, |\___|_|\____|_|_|_| #
+# ${PWD} as scratchpad directory.                  (___/					 #
+# -------------------------------------------------------------------------- #
+
+# Gathered from /init, /sbin/svc, /lib/init/* .
+bins_core_bb='
+	awk
+	chvt cttyhack
+	deallocvt
+	echo
+	false fgconsole
+	ifconfig
+	kill klogd
+	ln logger logread
+	mkdir modprobe mount mv
+	pidof
+	rm route
+	sed setsid sleep stat switch_root syslogd
+	test true
+	udhcpc umount
+'
+# Same as above, but not provided by BB (i.e. no config option for them), or not
+# fully compatible in BB's implementation.
+bins_core_nobb='
+	dropbear dropbearconvert dropbearkey
+	sh
+	tput
+	udevadm udevd
+'
+# Also gathered from the files mentioned above. Mostly features necessary to get
+# BB applets to behave like expected; for programs excluded due to compatibility
+# issues, see the comments in the files themselves (mainly /init).
+busybox_config='
+	ASH
+	ASH_JOB_CONTROL
+	-BASH_IS_ASH
+	-BASH_IS_HUSH
+	BASH_IS_NONE
+	-BLKID
+	FEATURE_EDITING_FANCY_PROMPT
+	FEATURE_FANCY_ECHO
+	FEATURE_FLOAT_SLEEP
+	FEATURE_IFCONFIG_STATUS
+	FEATURE_IPC_SYSLOG
+	-FEATURE_LOGREAD_REDUCED_LOCKING
+	FEATURE_MODPROBE_BLACKLIST
+	FEATURE_MODUTILS_ALIAS
+	FEATURE_MODUTILS_SYMBOLS
+	-FEATURE_REMOTE_LOG
+	-FEATURE_ROTATE_LOGFILE
+	FEATURE_SH_EXTRA_QUIET
+	FEATURE_SH_IS_ASH
+	-FEATURE_SH_IS_HUSH
+	-FEATURE_SH_IS_NONE
+	FEATURE_SH_NOFORK
+	FEATURE_STAT_FORMAT
+	-FEATURE_SYSLOGD_DUP
+	-HUSH
+	-INSTALL_APPLET_HARDLINKS
+	-INSTALL_APPLET_DONT
+	-INSTALL_APPLET_SCRIPT_WRAPPERS
+	INSTALL_APPLET_SYMLINKS
+	INSTALL_NO_USR
+	-MKFS_EXT2
+	-MKFS_REISER
+	-MKFS_VFAT
+	-MDEV
+	-MODPROBE_SMALL
+	-MOUNT
+	SH_MATH_SUPPORT
+	-SWITCH_ROOT
+	-UMOUNT
+'
+# Useful programs to fix disks/filesystems.
+bins_disk_extfs='
+	badblocks
+	chattr
+	debugfs dumpe2fs
+	e2freefrag e2fsck e2image e2label e2undo
+	filefrag fsck.ext2 fsck.ext3 fsck.ext4 fsck.ext4dev
+	logsave lsattr
+	mke2fs mkfs.ext2 mkfs.ext3 mkfs.ext4 mkfs.ext4dev mklost+found
+	resize2fs
+	tune2fs
+'
+bins_disk="
+	dd
+	${bins_disk_extfs}
+"
+# Core commands + BusyBox + other useful stuff.
+bins="
+	${bins_core_bb}
+	${bins_core_nobb}
+	busybox
+	nano
+	${bins_disk}
+"
+# Basic storage-oriented udev rules.
+udevrules='
+	50-firmware.rules
+	50-udev-default.rules
+	60-cdrom_id.rules
+	60-persistent-storage.rules
+	61-persistent-storage-edd.rules
+	80-drivers.rules
+	95-udev-late.rules
+'
+
+
+# Bulk-exports Portage environment variables into our actual environment, mostly
+# to feed them back to Portage after we switch to our make.conf .
+portage_export() {
+	local vars="$(
+		portageq envvar "${@}" |
+		awk -v sVars="${*}" '
+			{
+				match(sVars, /^[^ ]*/)
+				print "export " substr(sVars, 1, RLENGTH) "='\''" $0 "'\''"
+				sVars = substr(sVars, RLENGTH + 2)
+			}
+		'
+	)"
+	eval "${vars}"
+}
+
+
+# Don't assume that / is managed by Portage; / will be the "root environment".
+# Also, don't assume we're being called by kernel-gen, so let's find out ${ROOT}
+# indipendently.
+portage_export ROOT CHOST
+# This is the "parent (Portage) environment" from which the toolchain will be
+# borrowed.
+tym_parent="${ROOT}"
+# Static files.
+tym_src="${0%/*}"
+# Directory we assume to be empty, and that we'll fill with an image of a
+# complete initramfs.
+tym_work="${PWD%/}/"
+# Cache where we keep things that we don't want to regenerate on every
+# invocation.
+tym_cache="${tym_parent}var/cache/tinytium/${CHOST}/"
+# Root of our Portage environment. No, this has no moniker, it's just our root.
+tym_root="${tym_cache}root/"
+
+
+
+# Start of emerge phase. #######################################################
+
+
+
+# Copies stdin into a file, if the latter doesn't exist.
+catifnone() {
+	[ -f "${1}" ] || cat >"${1}"
+}
+
+
+# Filters/enriches BusyBox's saved configuration file, ensuring that /init's
+# dependencies are satisfied, and any compatibility issues avoided.
+adjconfig_busybox() {
+	awk -v sApplets="${bins_core_bb}" \
+	    -v sConfig="${busybox_config}" \
+	'
+		BEGIN {
+			# Assume that each applet has a corresponding CONFIG_
+			# option. Also, sConfig goes last, to override sApplets.
+			sConfig = toupper(sApplets) " " sConfig
+			sub(/^[[:space:]]+/, "", sConfig)
+			sub(/[[:space:]]+$/, "", sConfig)
+			split(sConfig, arrConfig, /[[:space:]]+/)
+			for (i in arrConfig) {
+				s = arrConfig[i]
+				bDisable = sub(/^-/, "", s)
+				# Assume bDisable == 0, for now.
+				sFind = "# CONFIG_" s " is not set"
+				sRepl = "CONFIG_" s "=y"
+				if (bDisable) {
+					# Swap sRepl and sFind.
+					s = sFind
+					sFind = sRepl
+					sRepl = s
+				}
+				# Avoid contradictory replacement pairs.
+				delete arrToggle[sRepl]
+				arrToggle[sFind] = sRepl
+			}
+		}
+		{
+			# This will toggle every option that is not how we
+			# want it.
+			if ($0 in arrToggle)
+				print arrToggle[$0]
+			else
+				print
+		}
+	' <"${1}"
+}
+
+
+# Filters/enriches Dropbear's saved configuration file, making it lighter and
+# ensuring it suits our needs.
+adjconfig_dropbear() {
+	dropbear_config='
+		-DO_HOST_LOOKUP
+		DO_MOTD
+		-ENABLE_SVR_PAM_AUTH
+		-ENABLE_X11FWD
+		-INETD_MODE
+		-LOG_COMMANDS
+		NON_INETD_MODE
+		-SFTPSERVER_PATH
+	'
+	awk -v sConfig="${dropbear_config}" '
+		BEGIN {
+			sub(/^[[:space:]]+/, "", sConfig)
+			sub(/[[:space:]]+$/, "", sConfig)
+			split(sConfig, arrConfig, /[[:space:]]+/)
+			for (i in arrConfig) {
+				s = arrConfig[i]
+				bDisable = sub(/^-/, "", s)
+				if (!bDisable)
+					print "#define " s
+				arrDelete[s] = 1
+			}
+		}
+		# If disabled, delete it; if enabled, it has been printed in
+		# BEGIN, so delete any other occurrence.
+		!($1 == "#define" && $2 in arrDelete) &&
+		!($1 == "#" && $2 == "define" && $3 in arrDelete)
+	' <"${1}"
+}
+
+
+# Imports and adjusts a savedconfig from the parent Portage environment.
+import_savedconfig() {
+	local cat=${1%/*} var=${1#*/} config
+	eval config=\"\${savedconfig_${var}}\"
+	local parentconfig="${tym_parent}${config#${tym_root}}"
+	# If there's a saved configuration for the package, copy and adjust it.
+	if [ -f "${parentconfig}"* -a ! -f "${config}" ]; then
+		[ -d etc/portage/savedconfig/${cat} ] ||
+			mkdir etc/portage/savedconfig/${cat}
+		adjconfig_${var} "${parentconfig}"* >"${config}"
+	fi
+}
+
+
+savedconfig_busybox="${tym_root}etc/portage/savedconfig/sys-apps/busybox"
+savedconfig_dropbear="${tym_root}etc/portage/savedconfig/net-misc/dropbear"
+
+
+# Prepare a secondary Portage environment to emerge packages with the
+# appropriate options.
+ebegin 'Setting up secondary Portage environment'
+[ -d "${tym_root}" ] || (
+	mkdir -p "${tym_root}etc/portage"
+	cd "${tym_root}etc/portage"
+	mkdir env profile savedconfig
+)
+cd "${tym_root}"
+
+# Make an approximate copy of the host Portage configuration.
+[ -e etc/make.profile ] ||
+	ln -fs $(readlink -m "${tym_parent}etc/make.profile") etc/make.profile
+[ -f etc/make.conf ] || (
+	# In a subshell, since it uses portage_export.
+	portage_export CFLAGS MAKEFLAGS
+	cat >etc/make.conf <<-EOF
+		FEATURES='-buildpkg -news nodoc noinfo noman'
+
+		# CFLAGS and LDFLAGS implement a trick to avoid using the host's
+		# includes and libraries.
+		CFLAGS='${CFLAGS} -I${tym_root}include -I${tym_root}usr/include'
+		CHOST=${CHOST}
+		LDFLAGS='-L${tym_root}lib -L${tym_root}usr/lib -Wl,-rpath-link,${tym_root}lib:${tym_root}usr/lib'
+		MAKEOPTS='${MAKEOPTS}'
+
+		USE='
+		 	-*
+			ipv6
+		 	minimal
+		 	unicode
+		'
+	EOF
+)
+
+# This is necessary to avoid pulling in files from the host.
+catifnone etc/portage/bashrc <<-EOF
+	pre_pkg_preinst() {
+		cd \${D}
+
+		einfo 'Removing .la files'
+		find -name '*.la' -delete
+
+		einfo 'Converting ld scripts to symlinks'
+		find -name '*.so' ! -type l -printf '%P\n' |
+		file -hNn -e apptype -e encoding -e tokens -e cdf -e compress -e elf -e soft -e tar -f- |
+		sed -ne 's/^\([^:]*\):.* text\$/\1/p' |
+		while read -r f; do
+			so=\$(awk -v sLdScr=\${f} '
+				\$1 == "GROUP" && \$2 == "(" && \$4 == ")" && NF == 4 {
+					sSo = substr(\$3, 2)
+				}
+				END {
+					if (!sSo)
+						exit 1
+					while ((ich = index(sLdScr, "/")) && substr(sLdScr, 1, ich) == substr(sSo, 1, ich)) {
+						sLdScr = substr(sLdScr, ich + 1)
+						sSo = substr(sSo, ich + 1)
+					}
+					sDots = ""
+					while (ich = index(sLdScr, "/")) {
+						sLdScr = substr(sLdScr, ich + 1)
+						sDots = sDots "../"
+					}
+					print sDots sSo
+				}
+			' <\${f}) && ln -fs \${so} \${f}
+		done
+
+		cd - >/dev/null
+	}
+EOF
+
+# Define packages to avoid in tym. If any libraries provided by these will be
+# required in the resulting image, they'll be sourced from the parent
+# environment.
+catifnone etc/portage/profile/package.provided <<-EOF
+	sys-apps/baselayout-99999
+	sys-libs/glibc-99999
+EOF
+
+# Fine-tune package options.
+catifnone etc/portage/package.use <<-EOF
+	app-editors/nano	-minimal ncurses
+	net-misc/dropbear	syslog zlib
+EOF
+
+# Extra-fine-tune package options.
+catifnone etc/portage/package.env <<-EOF
+	app-editors/nano	nano.conf
+	net-misc/dropbear	dropbear.conf
+	sys-apps/util-linux	util-linux.conf
+	sys-fs/e2fsprogs	e2fsprogs.conf
+	sys-libs/ncurses	ncurses.conf
+EOF
+catifnone etc/portage/env/nano.conf <<-EOF
+	EXTRA_ECONF='
+	 	--disable-extra
+	 	--disable-browser
+	 	--disable-mouse
+	 	--disable-operatingdir
+	 	--disable-tabcomp
+	 	--disable-wrapping
+	'
+EOF
+catifnone etc/portage/env/dropbear.conf <<-EOF
+	EXTRA_ECONF='
+	 	--disable-lastlog
+	 	--disable-utmp
+	 	--disable-utmpx
+	 	--disable-wtmp
+	 	--disable-wtmpx
+	 	--disable-loginfunc
+	 	--disable-pututline
+	 	--disable-pututxline
+	'
+EOF
+mkdir -p etc/portage/env/net-misc
+catifnone etc/portage/env/net-misc/dropbear <<-EOF
+	# Overrides \${progs} to exclude dbclient and scp.
+	set_options_custom() {
+	 	progs='dropbear dropbearkey dropbearconvert'
+	}
+	alias set_options=set_options_custom
+EOF
+catifnone etc/portage/env/util-linux.conf <<-EOF
+	EXTRA_ECONF='
+	 	--disable-uuidd
+	 	--disable-agetty
+	 	--disable-cramfs
+	 	--disable-pivot_root
+	 	--disable-unshare
+	  	--disable-partx
+	 	--disable-raw
+	 	--disable-rdev
+	 	--disable-rename
+	 	--disable-schedutils
+	 	--disable-write
+	'
+EOF
+catifnone etc/portage/env/e2fsprogs.conf <<-EOF
+	EXTRA_ECONF='
+	 	--enable-symlink-install
+	'
+EOF
+catifnone etc/portage/env/ncurses.conf <<-EOF
+	EXTRA_ECONF='
+	 	--with-terminfo-dirs=/lib/terminfo
+	'
+EOF
+
+
+import_savedconfig sys-apps/busybox
+import_savedconfig net-misc/dropbear
+
+# Take these variables from the parent Portage system.
+portage_export PORTDIR PORTDIR_OVERLAY DISTDIR PORTAGE_RO_DISTDIRS
+# eselect wants this:
+#export PORTDIR=$(mkrelpath "${PORTDIR}" "${tym_root}")
+
+# Set variables that can't go in make.conf.
+# See <http://www.gentoo.org/proj/en/base/embedded/handbook/>.
+export ROOT="${tym_root}"
+export PORTAGE_CONFIGROOT="${tym_root}"
+
+eend 0
+
+
+needs_emerge() {
+	[ -n "$(env FEATURES=notitles "${CROSS_COMPILE}emerge" -pquDN "${@}")" ]
+}
+
+
+emerge_quiet() {
+	"${CROSS_COMPILE}emerge" -q --quiet-build "${@}" >/dev/null
+#	"${CROSS_COMPILE}emerge" -v "${@}"
+}
+
+
+# If a package has never been emerged yet, emerges it with the default
+# configuration, and saves it; if a package doesn't need to be (re-)emerged, or
+# its saved configuration has changed, re-emerges it. Keeps on doing this until
+# the configuration is saved back with exactly the options we need/want not.
+emerge_savedconfig() {
+	local var=${1#*/} package=${1} binary=${2} config needs_emerge
+	local needs_emerge=
+	eval config=\"\${savedconfig_${var}}\"
+	# Only enable savedconfig if a configuration file is present.
+	if [ -f "${config}" ]; then
+		adjconfig_${var} "${config}" >"${config}".adj
+		# If the configuration needed any adjustments, replace it.
+		cmp -s "${config}" "${config}".adj ||
+			mv -f "${config}".adj "${config}"
+		export USE=savedconfig
+	fi
+	needs_emerge ${package} && needs_emerge=true || needs_emerge=false
+	while ${needs_emerge} || [ "${config}" -nt ${binary} ]; do
+		if ${needs_emerge}; then
+			# ${package} and/or its dependencies need to be emerged.
+			emerge_quiet -uDN ${package}
+		else
+			# Portage doesn't think ${package} needs to be emerged,
+			# but we do, so it must be forced.
+			emerge_quiet ${package}
+		fi
+		eend ${?} || exit
+
+		if [ -f "${config}" ]; then
+			# An updated configuration file has been saved back, but
+			# its name includes the version number: move it on top
+			# of the old one.
+			mv -f "${config}"-* "${config}"
+			# We just emerged it with an adjusted savedconfig, so no
+			# need to re-emerge.
+			needs_emerge=false
+		else
+			# A configuration file has been saved: adjust it, and
+			# strip the version number from its name.
+			adjconfig_${var} "${config}"-* >"${config}"
+			rm "${config}"-*
+			# The loop will now repeat, but this time emerge will
+			# use a proper saved configuration file.
+			export USE=savedconfig
+		fi
+	done
+	unset USE
+}
+
+
+# (Re)build packages needed by tinytium.
+#false &&
+{
+ebegin 'Building/updating necessary packages'
+emerge_savedconfig sys-apps/busybox bin/busybox
+emerge_savedconfig net-misc/dropbear usr/sbin/dropbeard
+emerge_quiet -uDN \
+	app-editors/nano \
+	sys-apps/util-linux \
+	sys-fs/e2fsprogs \
+	sys-fs/udev
+eend ${?} || exit
+}
+# Remove useless absolute symlink that would later confuse the binary dependency
+# resolver.
+[ -L usr/bin/nano ] && rm usr/bin/nano
+
+
+
+# End of emerge phase. #########################################################
+
+
+
+which=$(which which)
+cd "${tym_work}"
+rooted_path="${tym_root}usr/bin:${tym_root}usr/sbin:${tym_root}bin:${tym_root}sbin"
+rooted_libpath="${tym_root}usr/lib:${tym_root}lib:${tym_parent}usr/lib:${tym_parent}lib"
+
+
+ebegin 'Creating directories'
+mkdir -p bin dev etc/svc newroot proc sys var/run/svc
+eend ${?} || exit
+
+
+ebegin 'Adding source files'
+cp -a $(find "${tym_src}" -mindepth 1 -maxdepth 1 ! -name "${0##*/}") .
+eend ${?} || exit
+
+
+ebegin 'Adding terminfo'
+cp -a "${tym_root}etc/terminfo" lib/
+eend ${?} || exit
+
+
+ebegin 'Adding udev rules'
+mkdir -p lib/udev/rules.d
+(
+	cd "${tym_root}lib/udev/rules.d/${f}"
+	cp -a ${udevrules} "${tym_work}lib/udev/rules.d"
+)
+eend ${?} || exit
+
+
+ebegin 'Determining binaries not built into BusyBox'
+# Extract the names of any udev helpers required, and remove binaries built into
+# BB.
+bins=$(
+	cd "${tym_root}lib/udev/rules.d"
+	# Find out the names of the applets built into BusyBox.
+	tar -tf "${tym_root}usr/share/busybox/busybox-links.tar" |
+	awk -v sBins="${bins}" '
+		BEGIN {
+			iArgBBApplets = ARGC - 1
+			# Import currently selected binaries.
+			sub(/^[[:space:]]+/, "", sBins)
+			sub(/[[:space:]]+$/, "", sBins)
+			split(sBins, arrBinNames, /[[:space:]]+/)
+			for (i in arrBinNames)
+				arrBins[arrBinNames[i]] = 1
+		}
+		ARGIND != iArgBBApplets &&
+		sub(/^.*(RUN|IMPORT{program})\+?="/, "") {
+			# Only take the command name.
+			match($0, /^[^" ]*/)
+			sBin = substr($0, 1, RLENGTH)
+			# Exclude env var references.
+			if (substr(sBin, 1, 5) == "$env{")
+				next
+			# Strip the path, and hope that BB uses the same
+			# absolute paths udev expects.
+			if (sub(/^.*\//, "", sBin))
+				# 1 == name only.
+				arrBins[sBin] = 1
+			else
+				# 2 == relative path.
+				arrBins["lib/udev/" sBin] = 2
+		}
+		# Remove binaries included in BB.
+		ARGIND == iArgBBApplets {
+			# Strip the path, and omit this file from the output.
+			sub(/^.*\//, "")
+			delete arrBins[$0]
+		}
+		END {
+			# Output a new binary list.
+			for (sBin in arrBins)
+				# Print type and name.
+				print arrBins[sBin] " " sBin
+		}
+	' ${udevrules} - |
+	while read -r type name; do
+		if [ ${type} -eq 1 ]; then
+			# 1 == name only: find out its full path.
+			env PATH="${rooted_path}" ${which} ${name}
+		elif [ ${type} -eq 2 ]; then
+			# 2 == relative path: make it absolute.
+			echo "${tym_root}${name}"
+		fi
+	done
+)
+eend ${?} || exit
+
+
+ebegin 'Collecting shared object dependencies'
+portage_export ELIBC
+# Start with no collected dependencies.
+deps=
+# Initial set of files to scan for dependencies.
+scandeps="${bins}"
+while [ -n "${scandeps}" ]; do
+	# Get a list of dependencies of (current level) dependencies, omitting
+	# any libraries already accounted for.
+	scandeps=$(
+		"${CROSS_COMPILE}readelf" -dlW ${scandeps} |
+		awk -v sDeps="${deps}" -v sLDPath="${rooted_libpath}" '
+			function whichlib(sLib) {
+				# Check the cache first.
+				if (sLib in arrLibFullPaths)
+					return arrLibFullPaths[sLib];
+				sWhich = "for d in " sLDPath "; do" \
+					 "	lib=\"${d}/" sLib "\";" \
+					 "	[ -f \"${lib}\" ] && echo \"${lib}\" && break;" \
+					 "done"
+				sWhich | getline sFullPath
+				close(sWhich)
+				# Update the cache, and return the result.
+				arrLibFullPaths[sLib] = sFullPath
+				if (sFullPath)
+					return sFullPath
+				else
+					return "/unable/to/find/" sLib
+			}
+
+			function addwithsoname(sDir, sLib) {
+				# Add these backends, same version as glibc, and
+				# their SONAME links, found out with objdump.
+				print sDir sLib
+				sObjDump = ENVIRON["CROSS_COMPILE"] "objdump -x " sDir sLib
+				# Tiny awk sub-program here :)
+				while ((sObjDump | getline) > 0)
+					if ($1 == "SONAME" && NF >= 2)
+						print sDir $2
+				close(sObjDump)
+			}
+
+			BEGIN {
+				# Convert this for whichlib().
+				gsub(/:/, " ", sLDPath)
+				# Import currently collected dependencies.
+				sub(/^[[:space:]]+/, "", sDeps)
+				sub(/[[:space:]]+$/, "", sDeps)
+				split(sDeps, arrDepNames, /[[:space:]]+/)
+				for (i in arrDepNames)
+					arrDeps[arrDepNames[i]] = 1
+			}
+			{
+				if (match($0, /^[[:space:]]*\[Requesting program interpreter: /)) {
+					#      [Requesting program interpreter: /lib/ld-linux.so.2]
+					s = substr($0, 1 + RLENGTH, length() - RLENGTH - 1)
+					# Make it a relative path, so we can
+					# search for it with whichlib().
+					sub(/^.*\//, "", s)
+				} else if ($2 == "(NEEDED)")
+					# 0x00000001 (NEEDED) Shared library: [libc.so.6]
+					s = substr($5, 2, length($5) - 2)
+				else
+					next
+				s = whichlib(s)
+				# If it is a new dependency, add it to the list.
+				if (s in arrDeps)
+					next
+				arrScanDeps[s] = 1
+				# Check if it is a symlink.
+				sReadLink = "readlink -m \"" s "\""
+				sReadLink | getline s
+				close(sReadLink)
+				# If s was a symlink, skip it if its target has
+				# been added already; if it was not, this test
+				# will always be true.
+				if (s in arrDeps)
+					next
+				arrScanDeps[s] = 1
+			}
+			END {
+				bGlibc = (ENVIRON["ELIBC"] == "glibc")
+				for (s in arrScanDeps) {
+					print s
+					# If adding glibc, also add nsswitch.
+					if (bGlibc && match(s, /\/libc-[.0-9]+\.so$/)) {
+						# Extract the matched version
+						# number, and leave the path.
+						sVer = substr(s, RSTART + 6, RLENGTH - 6 - 3)
+						sub(/[^\/]*$/, "", s)
+						# Add these basic backends.
+						addwithsoname(s, "libnss_compat-" sVer ".so")
+						addwithsoname(s, "libnss_dns-" sVer ".so")
+						addwithsoname(s, "libnss_files-" sVer ".so")
+					}
+				}
+			}
+		'
+	)
+	# Add the newly discovered dependencies to ${deps}.
+	deps="${deps} ${scandeps}"
+done
+eend ${?} || exit
+
+
+ebegin 'Adding binaries and their dependencies'
+# Copy each file to ${tym_work}, keeping its relative path.
+for src in ${bins} ${deps}; do
+	if [ "${src#${tym_root}}" != "${src}" ]; then
+		dst="${src#${tym_root}}"
+	elif [ "${src#${tym_parent}}" != "${src}" ]; then
+		dst="${src#${tym_parent}}"
+		! [ -L "${src}" ] &&
+			ewarn "Sourcing dependency '${src}' from parent environment"
+	else
+		eerror "Cannot find dependency '${src}'"
+		eend 1 || exit
+	fi
+	# Don't bother keeping separate bin, sbin and lib in /usr.
+	dst="${tym_work}${dst#usr/}"
+	cp -a "${src}" "${dst}" || eend ${?} || exit
+done
+tar -xf "${tym_root}usr/share/busybox/busybox-links.tar"
+eend ${?} || exit
+
+
+ebegin 'Generating /etc/ld.so.cache'
+# TODO: what does this do on cross-compile, exactly? Does it really load foreign
+# binaries?
+ldconfig -r . 2>/dev/null
+eend ${?} || exit
+
+
+ebegin 'Creating/importing configuration files'
+
+ln -s ../proc/mounts etc/mtab
+
+echo 'root:x:0:0::/:/bin/sh' >etc/passwd
+echo 'root:x:0:' >etc/group
+# 'yrf:pass'
+echo 'root:$1$2yMecUvM$n6o/OjTWuHzxQftOBpGg//:15006:0:99999:7:::' >etc/shadow
+echo 'root:!::' >etc/gshadow
+chmod 0600 etc/shadow etc/gshadow
+
+if [ ${ELIBC} = glibc ]; then
+	cat >etc/nsswitch.conf <<-EOF
+		# Available backends are: compat, dns, files.
+
+		passwd:		compat
+		group:		compat
+		shadow:		compat
+
+		hosts:		dns files
+		networks:	files
+		ethers:		files
+		protocols:	files
+		rpc:		files
+		services:	files
+	EOF
+fi
+
+if [ -e "${tym_parent}etc/nanorc" ]; then
+	cfgroot="${tym_parent}"
+elif [ -e /etc/nanorc ]; then
+	cfgroot=/
+else
+	unset cfgroot
+fi
+if [ -n "${cfgroot}" ]; then
+	# Filter nanorc, deleting lines that require disabled functionalities.
+	# See /etc/portage/env/nano.conf tweaked above.
+	awk '
+		BEGIN {
+			# From USE=-justify
+			arrUnavailOpts["brackets"] = 1
+			arrUnavailKeys["justify"] = 1
+			arrUnavailKeys["beginpara"] = 1
+			arrUnavailKeys["endpara"] = 1
+			arrUnavailKeys["fulljustify"] = 1
+			# From USE=-spell
+			arrUnavailOpts["speller"] = 1
+			# From --disable-extra
+			# <none>
+			# From --disable-browser
+			# <none>
+			# From --disable-mouse
+			arrUnavailOpts["mouse"] = 1
+			# From --disable-operatingdir
+			arrUnavailOpts["operatingdir"] = 1
+			# From --disable-tabcomp
+			# <none>
+			# From --disable-wrapping
+			arrUnavailOpts["brackets"] = 1
+			arrUnavailOpts["nowrap"] = 1
+		}
+		# Skip includes, set options, and key bindings.
+		$1 != "include" &&
+		($1 != "set" || !($2 in arrUnavailOpts)) &&
+		($1 != "bind" || !($3 in arrUnavailKeys))
+	' <"${cfgroot}etc/nanorc" >etc/nanorc
+fi
+
+eend ${?} || exit
+

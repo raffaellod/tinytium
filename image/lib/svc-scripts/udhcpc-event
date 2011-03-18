@@ -1,0 +1,98 @@
+#!/bin/sh
+# -*- coding: utf-8; mode: sh; tab-width: 4 -*-
+# -------------------------------------------------------------------------- #
+# This file is part of Tinytium.											 #
+#																			 #
+# Tinytium is free software: you can redistribute it and/or modify it under	 #
+# the terms of the GNU General Public License as published by the Free		 #
+# Software Foundation, either version 3 of the License, or (at your option)	 #
+# any later version.														 #
+#																			 #
+# Tinytium is distributed in the hope that it will be useful, but WITHOUT	 #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or		 #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for	 #
+# more details.																 #
+#																			 #
+# You should have received a copy of the GNU General Public License along	 #
+# with Tinytium. If not, see <http://www.gnu.org/licenses/>.				 #
+# -------------------------------------------------------------------------- #
+# Network adapter configurator,      _____ _              _   _				 #
+# accessory to BusyBox's udhcpc.    |_   _|_)____  _   __| |_(_)_   _ ____	 #
+#                                     | | | |  _ \| | | |   _| | | | |    \	 #
+#                                     | | | | | \ | \_/ || |_| | \_| | | | | #
+#                                     |_| |_|_| |_|\__, |\___|_|\____|_|_|_| #
+#                                                  (___/					 #
+# -------------------------------------------------------------------------- #
+
+# Arguments provided through environment variables:
+#   interface (here aliased as itf)
+#   ip
+#   subnet
+#   broadcast
+#   router (list, aliased as gateways)
+#   domain
+#   dns (list, aliased as nameservers)
+itf=${interface}
+bc=${broadcast}
+gateways="${router}"
+nameservers="${dns}"
+
+
+resolvconf_clean() {
+	awk '
+		$0 == "# By udhcpc ('${itf}')" {
+			bSkip = 1
+		}
+		!bSkip
+		$0 == "# End udhcpc ('${itf}')" {
+			bSkip = 0
+		}
+	' </etc/resolv.conf
+}
+
+resolvconf_replace() {
+	if [ -s /etc/resolv.conf.new ]; then
+		mv -f /etc/resolv.conf.new /etc/resolv.conf
+	else
+		rm /etc/resolv.conf.new /etc/resolv.conf
+	fi
+}
+
+
+case ${1} in
+(deconfig)
+	ifconfig ${itf} 0.0.0.0
+	if [ -f /etc/resolv.conf ]; then
+		resolvconf_clean >/etc/resolv.conf.new
+		resolvconf_replace
+	fi
+	;;
+(bound|renew)
+	ifconfig ${itf} ${ip} ${subnet:+netmask ${subnet}} ${bc:+broadcast +${bc}}
+	if [ -n "${gateways}" ] ; then
+		while route del default gw 0.0.0.0 dev ${itf} 2>/dev/null; do
+			:
+		done
+		m=1
+		for gw in ${gateways}; do
+			route add default gw ${gw} dev ${itf} metric ${m}
+			m=$((${m} + 1))
+		done
+	fi
+	{
+		echo "# By udhcpc (${itf})"
+		[ -n "${domain}" ] && echo "search ${domain}"
+		for ns in ${nameservers}; do
+			echo "nameserver ${ns}"
+		done
+		echo "# End udhcpc (${itf})"
+		# Append the rest of the old resolv.conf .
+		[ -f /etc/resolv.conf ] && resolvconf_clean
+	} >/etc/resolv.conf.new
+	resolvconf_replace
+	;;
+(nak|leasefail)
+	echo "${0##*/}: unhandled: ${1}" >&2
+	;;
+esac
+

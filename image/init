@@ -1,0 +1,405 @@
+#!/bin/sh
+# -*- coding: utf-8; mode: sh; tab-width: 4 -*-
+# -------------------------------------------------------------------------- #
+# This file is part of Tinytium.											 #
+#																			 #
+# Tinytium is free software: you can redistribute it and/or modify it under	 #
+# the terms of the GNU General Public License as published by the Free		 #
+# Software Foundation, either version 3 of the License, or (at your option)	 #
+# any later version.														 #
+#																			 #
+# Tinytium is distributed in the hope that it will be useful, but WITHOUT	 #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or		 #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for	 #
+# more details.																 #
+#																			 #
+# You should have received a copy of the GNU General Public License along	 #
+# with Tinytium. If not, see <http://www.gnu.org/licenses/>.				 #
+# -------------------------------------------------------------------------- #
+# The init program.                  _____ _              _   _				 #
+#                                   |_   _|_)____  _   __| |_(_)_   _ ____	 #
+#                                     | | | |  _ \| | | |   _| | | | |    \	 #
+#                                     | | | | | \ | \_/ || |_| | \_| | | | | #
+#                                     |_| |_|_| |_|\__, |\___|_|\____|_|_|_| #
+#                                                  (___/					 #
+# -------------------------------------------------------------------------- #
+
+# Supported kernel arguments (* denotes default):
+#   noresume
+#   quiet
+#   resume=...
+#   ro*
+#   root=...
+#   rootflags=...
+#   rootfstype=...
+#   rw
+#   tym:break={cmdline,udev,trigger,settle,resume,mount,pre-init,init},...
+#   tym:errors={panic*,shell,ssh}
+#   tym:logvt=[n]
+#   tym:net.eth0=dhcp
+#   tym:net.eth1=192.168.1.10/24,gw=192.168.1.1
+
+# Compatibility notes on BusyBox's applets:
+# - blkid doesn't cooperate well with udev, and will result in root=UUID=...
+#   failures due to the absence of /dev/disk/by-uuid.
+# - mount won't resolve symlinks, so /proc/mounts will list /dev/disk/by-...
+#   instead of the much shorter /dev/sda1.
+# - switch_root seems to mount /dev read-only, which makes the Gentoo's boot
+#   process fail miserably.
+
+
+# Poor man's sed s///g.
+strsubst() {
+	eval local s=\${${1}}
+	while [ "${s##*${2}}" != "${s}" ]; do
+		s="${s%${2}*}${3}${s##*${2}}"
+	done
+	eval ${1}=\${s}
+}
+
+
+info() {
+	# 6 = KERN_INFO
+	echo "<6>init[${$}]: ${1}" >/dev/kmsg
+}
+
+warn() {
+	# 4 = KERN_WARNING
+	echo "<4>init[${$}]: warning: ${1}" >/dev/kmsg
+}
+
+error() {
+	# 1 = KERN_ALERT
+	echo "<1>init[${$}]: error: ${1}" >/dev/kmsg
+	shift
+	shell "${@}"
+}
+
+panic() {
+	# 0 = KERN_EMERG
+	{
+		echo "<0>init[${$}]: FATAL: ${1}"
+		echo "<0>init[${$}]: FATAL: boot aborted; panicking"
+	} >/dev/kmsg
+	# init exiting will trigger a kernel panic, which is probably the best
+	# thing to do at this point: at least, if panic= was specified, the
+	# kernel will reboot.
+	exit
+}
+
+shell() {
+	. /lib/init/shell "${@}"
+}
+
+shellonbreak() {
+	if [ "${tym_break#${1},}" != "${tym_break}" ]; then
+		tym_break="${tym_break#${1},}"
+		break=true
+	elif [ "${tym_break}" = ${1} ]; then
+		tym_break=
+		break=true
+	else
+		break=false
+	fi
+	${break} && shell "Breaking due to \`tym:break=${1}'."
+}
+
+
+# Basic initial setup.
+export PATH=/bin:/sbin
+mount -n -t proc /proc /proc
+mount -n -t sysfs /sys /sys
+mount -n -t devtmpfs -o mode=0755,size=8M udev /dev
+mkdir /dev/pts
+mount -n -t devpts -o gid=5,mode=620 devpts /dev/pts
+
+
+# Kernel command line processing functions.
+getarg() {
+	[ "${cmdline#* ${1} }" != "${cmdline}" ]
+}
+getargv() {
+	local tail="${cmdline#* ${1}=}"
+	if [ "${tail}" != "${cmdline}" ]; then
+		eval ${2:-${1}}=\${tail%% *}
+		return 0
+	else
+		unset ${1}
+		return 1
+	fi
+}
+read -r cmdline </proc/cmdline
+cmdline=" ${cmdline} "
+getarg quiet && quiet=true || quiet=false
+info 'loaded, starting boot sequence'
+
+
+# Analyze a few basic options.
+getargv 'tym:break' tym_break
+getargv 'tym:errors' tym_errors || tym_errors=panic
+case "${tym_errors}" in
+(panic|shell|ssh)
+	;;
+(*)
+	warn "invalid tym:errors argument value \`${tym_errors}', defaulting to \`panic'"
+	tym_errors=panic
+	;;
+esac
+shellonbreak cmdline
+
+
+# Find out the root filesystem, and its mount options.
+getargv root || panic 'no root argument provided'
+case "${root}" in
+(LABEL=?*)
+	strsubst root '/' '\x2f'
+	root=/dev/disk/by-label/${root#LABEL=}
+	;;
+(UUID=?*)
+	root=/dev/disk/by-uuid/${root#UUID=}
+	;;
+(/dev/?*)
+	;;
+(*)
+	panic "don't know how to handle \`root=${root}'"
+	;;
+esac
+getarg rw && baserflags=rw || baserflags=ro
+getargv rootflags
+allrflags=${baserflags}${rootflags:+,${rootflags}}
+getargv rootfstype || rootfstype=auto
+udev_wait_root=true
+
+
+# Determine whether to resume the system from hibernation.
+udev_wait_resume=false
+if ! getarg noresume; then
+	if getargv resume; then
+		case "${resume}" in
+		(LABEL=?*)
+			strsubst resume '/' '\x2f'
+			resume=/dev/disk/by-label/${resume#LABEL=}
+			;;
+		(UUID=?*)
+			resume=/dev/disk/by-uuid/${resume#UUID=}
+			;;
+		(/dev/?*)
+			;;
+		(*)
+			panic "don't know how to handle \`resume=${resume}'"
+			;;
+		esac
+		# Don't forget to wait for it.
+		udev_wait_resume=true
+	else
+		# Symlink the first hibernation resume image found to /dev/resume.
+		echo "SUBSYSTEM==\"block\", ACTION==\"add|change\", ENV{ID_FS_TYPE}==\"suspend|swsuspend\", SYMLINK+=\"resume\"" \
+			>/lib/udev/rules.d/99-resume.rules
+	fi
+fi
+
+
+# Start up udev and trigger cold plugs...
+shellonbreak udev
+udevd --daemon --resolve-names=never
+# ...then the rest.
+shellonbreak trigger
+udevadm trigger --action=add
+
+# And now, a few simple tasks to give udev some time.
+
+
+# Determine if the kernel supports SELinux by checking for its filesystem.
+selinuxsupp=false
+while read -r flags fstype; do
+	if [ "${fstype}" = selinuxfs ]; then
+		selinuxsupp=true
+		break
+	fi
+done </proc/filesystems
+
+# Only pass init a few well-known arguments.
+initargs=
+set -- ${cmdline}
+shift
+for s; do
+	case ${s} in
+	([0-9Ss]|auto|emergency|single)
+		initargs="${initargs} ${s}"
+		;;
+	esac
+done
+
+
+# End simple tasks. Now just plain busy waiting.
+
+udev_wait_finished() {
+	# If the root or resume devices show up, stop waiting for them, and make
+	# sure they're symlinked.
+	if ${udev_wait_root}; then
+		if [ -e ${root} ]; then
+			root=$(readlink -f ${root})
+			ln -fs ${root#/dev/} /dev/root
+		fi
+		[ -e /dev/root ] && udev_wait_root=false
+	fi
+	if ${udev_wait_resume}; then
+		if [ -e ${resume} ]; then
+			resume=$(readlink -f ${resume})
+			ln -fs ${resume#/dev/} /dev/resume
+		fi
+		[ -e /dev/resume ] && udev_wait_resume=false
+	fi
+	# If they both showed up, signal that the wait is over.
+	! ${udev_wait_root} && ! ${udev_wait_resume}
+}
+
+shellonbreak settle
+i=0
+while :; do
+	# Check for really quick devices.
+	udev_wait_finished && break
+
+	# Give udev a few more seconds, then check again.
+	udevadm settle --timeout=60
+	udev_wait_finished && break
+
+	# Wait for asynchronous SCSI device scanning, then check again.
+	modprobe scsi_wait_scan && modprobe -r scsi_wait_scan
+	udev_wait_finished && break
+
+	# Check if that stimulated any new events, at least.
+	if udevadm settle --timeout=0; then
+		# udev seems to be idle. Let's repeat this for an additional 10s
+		# before calling for user intervention.
+		sleep 0.5
+		i=$((${i} + 1))
+		# In messages, give priority to root.
+		if ${udev_wait_root}; then
+			d=${root}
+			l=/dev/root
+			s='root'
+		else
+			d=${resume}
+			l=/dev/resume
+			s='resume image'
+		fi
+		if [ ${i} -lt 20 ]; then
+			# Print something every now and then (3s).
+			[ $((${i} % 6)) -eq 0 ] && info "waiting for ${d} ..."
+		else
+			error "cannot find the ${s} device" \
+				'You can either wait a little longer, if you are sure that' \
+				"  ${d}" \
+				"is the correct ${s} device and will eventually come online, or you can" \
+				"create a symlink from ${l} to the correct device."
+
+			# Now, if the user created /dev/root as a symlink, but
+			# left our ${root} still non-existent, we have to do the
+			# reverse of udev_wait_finished.
+			${udev_wait_root} && [ -e /dev/root ] &&
+				root=$(readlink -f /dev/root) &&
+				udev_wait_root=false
+			# ${resume} instead, can be updated later.
+			${udev_wait_resume} && [ -e /dev/resume ] &&
+				udev_wait_resume=false
+			# If the wait is over, quit the loop.
+			! ${udev_wait_root} && ! ${udev_wait_resume} && break
+		fi
+	fi
+done
+
+
+# Try to resume the system.
+shellonbreak resume
+if [ -e /dev/resume ]; then
+	# ${resume} can be empty (/dev/resume created by udev), or wrong
+	# (/dev/resume created by manual intervention).
+	[ -n "${resume}" ] || resume=$(readlink -f /dev/resume)
+	info "resuming system from hibernation image in ${resume}"
+	resume=$(stat -Lc'%t %T' ${resume})
+	echo "$((0x${resume% *})):$((0x${resume#* }))" >/sys/power/resume
+fi
+
+
+# Try to mount the root filesystem.
+shellonbreak mount
+info "mounting ${root} (type: ${rootfstype}, options: ${allrflags})"
+if ! mount -n -t ${rootfstype} -o ${allrflags} ${root} /newroot; then
+	error "unable to mount ${root} as root" \
+		'You have to mount /newroot manually.'
+	# Check which device was mounted as /newroot, so we can remount it
+	# later. Also make sure it's symlinked.
+	while read -r dev mp rest; do
+		if [ ${mp} = /newroot ]; then
+			root=${dev}
+			ln -fs ${root#/dev/} /dev/root
+			break
+		fi
+	done </proc/mounts
+	# If /newroot was not mounted, there's no point in going ahead.
+	[ -e ${root} ] || panic 'no root mounted in /newroot'
+fi
+
+# If no root mount options were specified and /newroot/etc/fstab contains
+# special mount options for it, remount the root with the options in fstab.
+if [ -z "${rootflags}" -a -f /newroot/etc/fstab ]; then
+	while read -r dev mp rootfstype opts rest; do
+		# Skip comments, and only consider /.
+		if [ "${dev%%#*}" = "${dev}" -a "${mp}" = / ]; then
+			# Add leading and trailing commas for later.
+			rootflags=,${opts},
+			break
+		fi
+	done </newroot/etc/fstab
+	# Strip ro, rw and defaults.
+	strsubst rootflags ',r[ow],' ','
+	strsubst rootflags ',defaults,' ','
+	# Remove the added leading and trailing commas.
+	rootflags=${rootflags#,}
+	rootflags=${rootflags%,}
+	# If there's still any options left, use them.
+	if [ -n "${rootflags}" ]; then
+		allrflags=${baserflags},${rootflags}
+		info "remounting ${root} (type: ${rootfstype}, options: ${allrflags})"
+		umount /newroot
+		if ! mount -n -t ${rootfstype} -o ${allrflags} ${root} /newroot; then
+			error "unable to remount ${root} as root" \
+				'You will have to remount it manually.'
+		fi
+	fi
+fi
+
+
+# Check for init.
+shellonbreak pre-init
+getargv init || init=/sbin/init
+[ -n "${init}" ] ||
+	panic "argument \`init=' must specify a valid executable"
+if ! [ -f /newroot${init} -a -x /newroot${init} ]; then
+	error "cannot find ${init} to run as init - wrong root filesystem?" \
+		"Please mount the correct root filesystem where ${init} can be found."
+fi
+
+if ${selinuxsupp}; then
+	: # TODO: load SELinux policy.
+fi
+
+# Stop udev, else terminate it, else kill it.
+udevadm control --stop-exec-queue
+sig=TERM
+while pids=$(pidof udevd); do
+	for pid in ${pids}; do
+		kill -${sig} ${pid} 2>/dev/null
+	done
+	sig=KILL
+done
+
+
+shellonbreak init
+
+info 'switching root'
+exec switch_root /newroot ${init} ${initargs}
+# Fall through...
+error 'unable to switch to the requested root'
+

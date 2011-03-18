@@ -1,0 +1,242 @@
+#!/bin/sh
+# -*- coding: utf-8; mode: sh; tab-width: 4 -*-
+# -------------------------------------------------------------------------- #
+# This file is part of Tinytium.											 #
+#																			 #
+# Tinytium is free software: you can redistribute it and/or modify it under	 #
+# the terms of the GNU General Public License as published by the Free		 #
+# Software Foundation, either version 3 of the License, or (at your option)	 #
+# any later version.														 #
+#																			 #
+# Tinytium is distributed in the hope that it will be useful, but WITHOUT	 #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or		 #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for	 #
+# more details.																 #
+#																			 #
+# You should have received a copy of the GNU General Public License along	 #
+# with Tinytium. If not, see <http://www.gnu.org/licenses/>.				 #
+# -------------------------------------------------------------------------- #
+# Minimalistic service start/stop    _____ _              _   _				 #
+# utility.                          |_   _|_)____  _   __| |_(_)_   _ ____	 #
+#                                     | | | |  _ \| | | |   _| | | | |    \	 #
+# Handles service dependencies, and   | | | | | \ | \_/ || |_| | \_| | | | | #
+# can act (kind of) like sysvinit.    |_| |_|_| |_|\__, |\___|_|\____|_|_|_| #
+#                                                  (___/					 #
+# -------------------------------------------------------------------------- #
+
+linfo() {
+	info "${1}"
+	# 6 = KERN_INFO
+	logger -p 6 -t "svc(${SVC_NAME})[${$}]" "${1}"
+}
+
+lwarn() {
+	warn "${1}"
+	# 4 = KERN_WARNING
+	logger -p 4 -t "svc(${SVC_NAME})[${$}]" "warning: ${1}"
+}
+
+lerror() {
+	error "${1}"
+	# 2 = KERN_CRIT
+	logger -p 2 -t "svc(${SVC_NAME})[${$}]" "error: ${1}"
+}
+
+ldie() {
+	lerror "${1}"
+	exit ${2:-1}
+}
+
+info() {
+	echo "svc(${SVC_NAME}): ${1}"
+}
+
+warn() {
+	echo "svc(${SVC_NAME}): warning: ${1}" >&2
+}
+
+error() {
+	echo "svc(${SVC_NAME}): error: ${1}" >&2
+}
+
+die() {
+	error "${1}"
+	exit ${2:-1}
+}
+
+
+# Waits at most ${1}s for a program to terminate politely, else kills it.
+#   waitkill 5 1706
+#   waitkill 5 -f /var/run/daemon.pid
+#   waitkill 5 -f /var/run/daemon.pid -d
+#   waitkill 5 -x daemon
+waitkill() {
+	local i=0 pid sig=TERM timeout=$((${1} * 10))
+	if [ ${2} = -f ]; then
+		[ -f ${3} ] || return 0
+		read pid <${3}
+		[ "${4}" = -d ] && rm -f ${3}
+	elif [ ${2} = -x ]; then
+		pid=$(pidof ${3}) || return 0
+	else
+		pid=${2}
+	fi
+	while kill -${sig} ${pid} 2>/dev/null; do
+		sleep 0.1
+		i=$((${i} + 1))
+		# When the time's over, use brute force.
+		[ ${i} -eq ${timeout} ] && sig=KILL
+	done
+	return 0
+}
+
+
+is_started() {
+	[ -e /var/run/svc/${1:-${SVC_NAME}}.started ]
+}
+
+
+is_started_text() {
+	is_started ${1} && echo 'started' || echo 'stopped'
+}
+
+
+# Just to print messages properly.
+SVC_NAME=-
+if [ -z "${1}" ]; then
+	die 'no service specified'
+elif [ ${1} != -a ]; then
+	if [ ! -f "/lib/svc/${1}" ]; then
+		die "cannot locate service \`${1}'"
+	else
+		SVC_NAME="${1}"
+	fi
+fi
+SVC_ACTION="${2}"
+shift 2
+
+
+if [ ${SVC_NAME} = - ]; then
+	# Special case: -a (turned into ${SVC_NAME} = '-') applies to all services.
+	# Basically, it makes svc behave similarly to init(1).
+	case "${SVC_ACTION}" in
+	(wait)
+		# No callback necessary; it will just lock until all *.started
+		# files are deleted.
+		inotifyd true $(
+			ls /var/run/svc/*.started |
+			sed -e 's/$/:d/'
+		)
+		;;
+	(stop)
+		ret=0
+		for svc in /lib/svc/*; do
+			svc=${svc##*/}
+			if is_started ${svc}; then
+				${0} ${svc} stop || ret=${?}
+			fi
+		done
+		[ ${ret} -eq 0 ] || ldie 'not all services could be stopped'
+		;;
+	('')
+		die 'no action requested'
+		;;
+	(*)
+		die "invalid action requested on all services: ${SVC_ACTION}"
+		;;
+	esac
+	exit 0
+fi
+
+
+case "${SVC_ACTION}" in
+(info)
+	. /lib/svc/${SVC_NAME} "${@}"
+	cat <<-EOF
+		Service name: ${SVC_NAME}
+		Description: ${SVC_DESC}
+		Status: $(is_started_text)
+		Depends on: ${SVC_NEEDS:-(none)}
+	EOF
+	;;
+(status)
+	info $(is_started_text)
+	;;
+(start|stop|restart)
+	_loadconfig() {
+		# If the configuration doesn't exist, tell the service to improvise.
+		[ -f /etc/svc/${SVC_NAME}.conf ] || svc_initconfig /etc/svc/${SVC_NAME}.conf ||
+			die 'unable to initialize the service configuration'
+		# Try loading the service's configuration.
+		[ -f /etc/svc/${SVC_NAME}.conf ] && . /etc/svc/${SVC_NAME}.conf
+	}
+
+
+	# Placeholders, in case the service doesn't declare (provide) them.
+	svc_initconfig() {
+		return 0
+	}
+	svc_start() {
+		return 0
+	}
+	svc_stop() {
+		return 0
+	}
+
+	# Actually load the service's script.
+	. /lib/svc/${SVC_NAME} "${@}"
+	configloaded=false
+
+	if [ ${SVC_ACTION} = stop -o ${SVC_ACTION} = restart ]; then
+		if is_started; then
+			if [ -f /var/run/svc/${SVC_NAME}.clients ]; then
+				# Stop dependant services first.
+				while read dep; do
+					${0} ${dep} stop ||
+						ldie 'could not stop dependant service; aborting service stop'
+				done </var/run/svc/${SVC_NAME}.clients
+				rm -f /var/run/svc/${SVC_NAME}.clients
+			fi
+			if ! ${configloaded}; then
+				_loadconfig
+				configloaded=true
+			fi
+			svc_stop || ldie 'could not stop service'
+			# Unregister this service from its dependencies.
+			for req in ${SVC_NEEDS}; do
+				sed -i -e '/^'${SVC_NAME}'$/ d' /var/run/svc/${req}.clients
+			done
+			rm -f /var/run/svc/${SVC_NAME}.started
+			linfo 'service stopped'
+		else
+			lwarn 'service was not started'
+		fi
+	fi
+	if [ ${SVC_ACTION} = start -o ${SVC_ACTION} = restart ]; then
+		if ! is_started; then
+			# Start dependencies first.
+			for req in ${SVC_NEEDS}; do
+				is_started ${req} || ${0} ${req} start ||
+					ldie 'could not start required dependency; aborting service start'
+			done
+			${configloaded} || _loadconfig
+			svc_start || ldie 'could not start service'
+			: >/var/run/svc/${SVC_NAME}.started
+			# Record this service as dependant on its dependencies.
+			for req in ${SVC_NEEDS}; do
+				echo ${SVC_NAME} >>/var/run/svc/${req}.clients
+			done
+			linfo 'service started'
+		else
+			lwarn 'service was already started'
+		fi
+	fi
+	;;
+('')
+	die 'no action requested'
+	;;
+(*)
+	die "invalid action requested: ${SVC_ACTION}"
+	;;
+esac
+
