@@ -263,7 +263,7 @@ rooted_emerge() {
 					# ${PORTAGE_CONFIGROOT}/etc/...
 					[ -e "${config_bestavail}" ] ||
 						mv -f "${tym_root}etc/portage/savedconfig/${pkg_bestavail}" "${config_bestavail}"
-					adjconfig_${pn} "${config_bestavail}" >"${config_bestavail}-tym"
+					adjconfig_${pn} "${config_bestavail}" >"${config_any}-tym"
 					rm -f "${config_bestavail}"
 					# And now re-enable USE=savedconfig.
 					lUSE="${lUSE} savedconfig"
@@ -274,7 +274,7 @@ rooted_emerge() {
 				# it, but preserve a possibly existing same-name savedconfig.
 				[ -f "${config_bestavail}" ] &&
 					mv -f "${config_bestavail}" "${config_bestavail}-notym"
-				mv "${config_bestavail}-tym" "${config_bestavail}"
+				mv "${config_any}-tym" "${config_bestavail}"
 			fi
 		else
 			force_emerge=false
