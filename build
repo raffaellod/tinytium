@@ -190,8 +190,13 @@ rooted_emerge_raw() {
 		FEATURES="-buildpkg -news nodoc noinfo noman ${lFEATURES}" \
 		USE="${lUSE}" \
 		EXTRA_ECONF="${lEXTRA_ECONF}" \
-		"${CROSS_COMPILE}emerge" -q --quiet-build "${@}" >/dev/null
-#		"${CROSS_COMPILE}emerge" -v "${@}"
+		"${CROSS_COMPILE}emerge" "${@}"
+}
+
+# Quiet version of rooted_emerge_raw.
+rooted_emerge_raw_q() {
+	rooted_emerge_raw -q --quiet-build "${@}" >/dev/null
+#	rooted_emerge_raw -v "${@}"
 }
 
 # Re-emerges each specified package, if necessary. If a vabiable named
@@ -219,7 +224,7 @@ rooted_emerge() {
 		[ -n ${refbinary} ] && lUSE="${lUSE} savedconfig"
 
 		# Find out if the cached installed version needs to be updated.
-		[ -n "$(rooted_emerge_raw -pquNO "${@}")" ] &&
+		[ -n "$(rooted_emerge_raw -pquNO ${pkg})" ] &&
 			needs_emerge=true || needs_emerge=false
 		unset lFEATURES
 
@@ -256,7 +261,7 @@ rooted_emerge() {
 					# do need to emerge the package, emerge it once to create
 					# a default saved configuration, with USE=-savedconfig.
 					lUSE="${lUSE% savedconfig}"
-					rooted_emerge_raw -uNO ${pkg}
+					rooted_emerge_raw_q -uNO ${pkg}
 					# Fix an issue in current savedconfig.eclass, where the
 					# saved configuration is placed in
 					# ${ROOT}/${PORTAGE_CONFIGROOT}/etc/... instead of
@@ -281,7 +286,7 @@ rooted_emerge() {
 		fi
 
 		if ${needs_emerge} || ${force_emerge}; then
-			rooted_emerge_raw -uNO ${pkg}
+			rooted_emerge_raw_q -uNO ${pkg}
 			ret=${?}
 		else
 			ret=0
