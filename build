@@ -1,27 +1,27 @@
 #!/bin/sh
-# -*- coding: utf-8; mode: sh; tab-width: 4 -*-
+# -*- coding: utf-8; mode: sh; tab-width: 3 -*-
 # -------------------------------------------------------------------------- #
-# This file is part of Tinytium.											 #
-#																			 #
-# Tinytium is free software: you can redistribute it and/or modify it under	 #
-# the terms of the GNU General Public License as published by the Free		 #
-# Software Foundation, either version 3 of the License, or (at your option)	 #
-# any later version.														 #
-#																			 #
-# Tinytium is distributed in the hope that it will be useful, but WITHOUT	 #
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or		 #
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for	 #
-# more details.																 #
-#																			 #
-# You should have received a copy of the GNU General Public License along	 #
-# with Tinytium. If not, see <http://www.gnu.org/licenses/>.				 #
+# This file is part of Tinytium.															  #
+#																									  #
+# Tinytium is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU General Public License as published by the Free		  #
+# Software Foundation, either version 3 of the License, or (at your option)  #
+# any later version.																			  #
+#																									  #
+# Tinytium is distributed in the hope that it will be useful, but WITHOUT	  #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or		  #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for	  #
+# more details.																				  #
+#																									  #
+# You should have received a copy of the GNU General Public License along	  #
+# with Tinytium. If not, see <http://www.gnu.org/licenses/>.					  #
 # -------------------------------------------------------------------------- #
-# Image generation script for        _____ _              _   _				 #
-# Tinytium.                         |_   _|_)____  _   __| |_(_)_   _ ____	 #
-#                                     | | | |  _ \| | | |   _| | | | |    \	 #
+# Image generation script for        _____ _              _   _				  #
+# Tinytium.                         |_   _|_)____  _   __| |_(_)_   _ ____	  #
+#                                     | | | |  _ \| | | |   _| | | | |    \  #
 # It doesn't make assumptions on      | | | | | \ | \_/ || |_| | \_| | | | | #
 # what/who invoked it; will use       |_| |_|_| |_|\__, |\___|_|\____|_|_|_| #
-# ${PWD} as scratchpad directory.                  (___/					 #
+# ${PWD} as scratchpad directory.                  (___/							  #
 # -------------------------------------------------------------------------- #
 
 # Gathered from /init, /sbin/svc, /lib/init/* .
@@ -237,8 +237,8 @@ rooted_emerge() {
 			# Find out which version would be installed.
 			pkg_bestavail=$(portageq best_visible "${tym_parent}" ${pkg})
 			local config_bestavail="${savedconfigs}${pkg_bestavail}"
-			# Pick the newest saved configuration, and check if it's more
-			# recent than the reference binary.
+			# Pick the newest saved configuration, and check if it's more recent
+			# than the reference binary.
 			force_emerge=true
 			if [ -n "${pkg_bestavail}" -a -e "${config_bestavail}" ]; then
 				[ ${refbinary} -nt "${config_bestavail}" ] && force_emerge=false
@@ -250,23 +250,23 @@ rooted_emerge() {
 				[ ${refbinary} -nt "${config_any}" ] && force_emerge=false
 				adjconfig_${pn} "${config_any}" >"${config_any}-tym"
 			else
-				# There's no saved configuration, so assume that we last
-				# emerged it and then deleted the temporary savedconfig, so
-				# we'll consider it now up-to-date, as far as ${force_emerge}
-				# is concerned.
+				# There's no saved configuration, so assume that we last emerged
+				# it and then deleted the temporary savedconfig, so we'll consider
+				# it now up-to-date, as far as ${force_emerge} is concerned.
 				force_emerge=false
 				if ${needs_emerge}; then
-					# Since there's no saved configuration available, but we
-					# do need to emerge the package, emerge it once to create
-					# a default saved configuration, with USE=-savedconfig.
+					# Since there's no saved configuration available, but we do
+					# need to emerge the package, emerge it once to create a
+					# default saved configuration, with USE=-savedconfig.
 					lUSE="${lUSE% savedconfig}"
 					rooted_emerge_raw_q -uNO ${pkg}
-					# Fix an issue in current savedconfig.eclass, where the
-					# saved configuration is placed in
-					# ${ROOT}/${PORTAGE_CONFIGROOT}/etc/... instead of
-					# ${PORTAGE_CONFIGROOT}/etc/...
+					# Fix an issue in current savedconfig.eclass, where the saved
+					# configuration is placed in ${ROOT}/${PORTAGE_CONFIGROOT}/etc/
+					# instead of ${PORTAGE_CONFIGROOT}/etc/ .
 					[ -e "${config_bestavail}" ] ||
-						mv -f "${tym_root}etc/portage/savedconfig/${pkg_bestavail}" "${config_bestavail}"
+						mv -f \
+							"${tym_root}etc/portage/savedconfig/${pkg_bestavail}" \
+							"${config_bestavail}"
 					adjconfig_${pn} "${config_bestavail}" >"${config_any}-tym"
 					rm -f "${config_bestavail}"
 					# And now re-enable USE=savedconfig.
@@ -274,8 +274,8 @@ rooted_emerge() {
 				fi
 			fi
 			if ${needs_emerge} || ${force_emerge}; then
-				# Rename the adjusted configuration so that emerge will use
-				# it, but preserve a possibly existing same-name savedconfig.
+				# Rename the adjusted configuration so that emerge will use it,
+				# but preserve a possibly existing same-name savedconfig.
 				[ -f "${config_bestavail}" ] &&
 					mv -f "${config_bestavail}" "${config_bestavail}-notym"
 				mv "${config_any}-tym" "${config_bestavail}"
@@ -316,8 +316,8 @@ adjconfig_busybox() {
 	    -v sConfig="${busybox_config}" \
 	'
 		BEGIN {
-			# Assume that each applet has a corresponding CONFIG_ option.
-			# Also, sConfig goes last, to override sApplets.
+			# Assume that each applet has a corresponding CONFIG_ option. Also,
+			# sConfig goes last, to override sApplets.
 			sConfig = toupper(sApplets) " " sConfig
 			sub(/^[[:space:]]+/, "", sConfig)
 			sub(/[[:space:]]+$/, "", sConfig)
@@ -449,7 +449,7 @@ eend ${?} || exit
 
 
 
-# End of emerge phase. #########################################################
+# End of emerge phase. #######################################################
 
 
 
@@ -508,8 +508,8 @@ bins=$(
 			# Exclude env var references.
 			if (substr(sBin, 1, 5) == "$env{")
 				next
-			# Strip the path, and hope that BB uses the same absolute paths
-			# udev expects.
+			# Strip the path, and hope that BB uses the same absolute paths udev
+			# expects.
 			if (sub(/^.*\//, "", sBin))
 				# 1 == name only.
 				arrBins[sBin] = 1
@@ -596,7 +596,10 @@ while [ -n "${scandeps}" ]; do
 					arrDeps[arrDepNames[i]] = 1
 			}
 			{
-				if (match($0, /^[[:space:]]*\[Requesting program interpreter: /)) {
+				if (match(
+					$0,
+					/^[[:space:]]*\[Requesting program interpreter: /
+				)) {
 					#      [Requesting program interpreter: /lib/ld-linux.so.2]
 					s = substr($0, 1 + RLENGTH, length() - RLENGTH - 1)
 					# Make it a relative path, so we can search for it with
@@ -628,8 +631,7 @@ while [ -n "${scandeps}" ]; do
 					print s
 					# If adding glibc, also add nsswitch.
 					if (bGlibc && match(s, /\/libc-[.0-9]+\.so$/)) {
-						# Extract the matched version number, and leave the
-						# path.
+						# Extract the matched version number, and leave the path.
 						sVer = substr(s, RSTART + 6, RLENGTH - 6 - 3)
 						sub(/[^\/]*$/, "", s)
 						# Add these basic backends.
@@ -709,8 +711,8 @@ else
 	unset cfgroot
 fi
 if [ -n "${cfgroot}" ]; then
-	# Filter nanorc, deleting lines that require disabled functionalities. See
-	# ${EXTRA_ECONF_nano} tweaks above.
+	# Filter nanorc, deleting lines that require disabled functionality. See
+	# the ${EXTRA_ECONF_nano} tweaks above.
 	awk '
 		BEGIN {
 			# From USE=-justify

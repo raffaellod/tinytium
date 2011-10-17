@@ -1,26 +1,26 @@
-# -*- coding: utf-8; mode: sh; tab-width: 4 -*-
+# -*- coding: utf-8; mode: sh; tab-width: 3 -*-
 # -------------------------------------------------------------------------- #
-# This file is part of Tinytium.											 #
-#																			 #
-# Tinytium is free software: you can redistribute it and/or modify it under	 #
-# the terms of the GNU General Public License as published by the Free		 #
-# Software Foundation, either version 3 of the License, or (at your option)	 #
-# any later version.														 #
-#																			 #
-# Tinytium is distributed in the hope that it will be useful, but WITHOUT	 #
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or		 #
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for	 #
-# more details.																 #
-#																			 #
-# You should have received a copy of the GNU General Public License along	 #
-# with Tinytium. If not, see <http://www.gnu.org/licenses/>.				 #
+# This file is part of Tinytium.															  #
+#																									  #
+# Tinytium is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU General Public License as published by the Free		  #
+# Software Foundation, either version 3 of the License, or (at your option)  #
+# any later version.																			  #
+#																									  #
+# Tinytium is distributed in the hope that it will be useful, but WITHOUT	  #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or		  #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for	  #
+# more details.																				  #
+#																									  #
+# You should have received a copy of the GNU General Public License along	  #
+# with Tinytium. If not, see <http://www.gnu.org/licenses/>.					  #
 # -------------------------------------------------------------------------- #
-# Part of init, only invoked when    _____ _              _   _				 #
-# init encounters a problem.        |_   _|_)____  _   __| |_(_)_   _ ____	 #
-#                                     | | | |  _ \| | | |   _| | | | |    \	 #
+# Part of init, only invoked when    _____ _              _   _				  #
+# init encounters a problem.        |_   _|_)____  _   __| |_(_)_   _ ____	  #
+#                                     | | | |  _ \| | | |   _| | | | |    \  #
 # It can start an SSH shell, a        | | | | | \ | \_/ || |_| | \_| | | | | #
 # local shell, or just panic and      |_| |_|_| |_|\__, |\___|_|\____|_|_|_| #
-# die.                                             (___/					 #
+# die.                                             (___/							  #
 # -------------------------------------------------------------------------- #
 
 if [ ${tym_errors} = ssh ]; then
@@ -49,8 +49,8 @@ if [ ${tym_errors} = ssh ]; then
 	return 0
 fi
 
-# If a break was requested, it certainly wasn't to just end up in panic, so this
-# is the default if tym:break was specified but tym:errors was not.
+# If a break was requested, it certainly wasn't to just end up in panic, so
+# this is the default if tym:break was specified but tym:errors was not.
 if [ ${tym_errors} = shell -o -n "${tym_break}" ]; then
 	# Wait until any pending printk is flushed, then start syslogd.
 	sleep 0.25
