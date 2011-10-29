@@ -596,9 +596,9 @@ while [ -n "${scandeps}" ]; do
 					arrDeps[arrDepNames[i]] = 1
 			}
 			{
-				if (match(
-					$0,
-					/^[[:space:]]*\[Requesting program interpreter: /
+				if (match( \
+					$0, \
+					/^[[:space:]]*\[Requesting program interpreter: / \
 				)) {
 					#      [Requesting program interpreter: /lib/ld-linux.so.2]
 					s = substr($0, 1 + RLENGTH, length() - RLENGTH - 1)
