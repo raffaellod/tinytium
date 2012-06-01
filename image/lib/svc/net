@@ -129,7 +129,7 @@ svc_stop() {
 		fi
 		if ifconfig ${itf} | grep -q '^[[:space:]]\+UP\>'; then
 			linfo "${itf}: deconfiguring"
-			ifconfig ${itf} down ||
+			ifconfig ${itf} down 0.0.0.0 ||
 				lerror "${itf}: unable to deconfigure"
 		fi
 	done
