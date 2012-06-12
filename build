@@ -313,7 +313,7 @@ rooted_emerge() {
 
 
 # Filters/enriches BusyBox's saved configuration file, ensuring that /init's
-# dependencies are satisfied, and any compatibility issues avoided.
+# dependencies are satisfied and avoiding any compatibility issues.
 adjconfig_busybox() {
 	awk -v sApplets="${bins_core_bb}" \
 	    -v sConfig="${busybox_config}" \
@@ -740,7 +740,7 @@ if [ -n "${cfgroot}" ]; then
 			arrUnavailOpts["brackets"] = 1
 			arrUnavailOpts["nowrap"] = 1
 		}
-		# Skip includes, set options, and key bindings.
+		# Skip includes and unavailable set options and key bindings.
 		$1 != "include" &&
 		($1 != "set" || !($2 in arrUnavailOpts)) &&
 		($1 != "bind" || !($3 in arrUnavailKeys))
