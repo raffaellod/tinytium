@@ -179,7 +179,13 @@ savedconfigs="${tym_parent}etc/portage/savedconfig/"
 
 # (Re)build packages needed by Tinytium, each with the appropriate options.
 ebegin 'Building/updating necessary packages'
-[ -d "${tym_root}" ] || mkdir -p "${tym_root}"
+if [ ! -d "${tym_root}" ]; then
+	mkdir -p "${tym_root}"
+	if [ ${ARCH} = x86_64 ]; then
+		mkdir "${tym_root}lib"
+		ln -s lib "${tym_root}lib64"
+	fi
+fi
 cd "${tym_root}"
 
 # Deploy the files in our root, using the parent's Portage configuration,
@@ -433,7 +439,7 @@ EXTRA_ECONF_ncurses='
 '
 
 
-#false &&
+#true ||
 rooted_emerge \
 	net-misc/dropbear \
 	sys-apps/busybox \
@@ -462,6 +468,7 @@ rooted_libpath="${tym_root}usr/lib:${tym_root}lib:${tym_parent}usr/lib:${tym_par
 
 
 ebegin 'Creating directories'
+[ ${ARCH} = x86_64 ] && ln -s lib lib64
 mkdir -p bin dev etc/svc newroot proc sys var/run/svc
 eend ${?} || exit
 
@@ -671,7 +678,7 @@ done
 while read -r name; do
 	ln -s busybox bin/${name}
 done
-#ls -lR --color=always >/tmp/tym.ls
+#ls -lR --color=always >/tmp/tym_pre-ldconfig.ls
 eend ${?} || exit
 
 
