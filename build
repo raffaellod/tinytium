@@ -27,7 +27,7 @@
 # ${PWD} as scratchpad directory.                  (___/							  #
 # -------------------------------------------------------------------------- #
 
-# Gathered from /init, /sbin/svc, /lib/init/* .
+# Gathered from the various scripts in image and its subfolders.
 bins_core_bb='
 	awk
 	chvt cttyhack
@@ -85,7 +85,7 @@ busybox_config='
 	-INSTALL_APPLET_HARDLINKS
 	-INSTALL_APPLET_DONT
 	-INSTALL_APPLET_SCRIPT_WRAPPERS
-	INSTALL_APPLET_SYMLINKS
+	-INSTALL_APPLET_SYMLINKS
 	INSTALL_NO_USR
 	-MKFS_EXT2
 	-MKFS_REISER
@@ -165,8 +165,7 @@ tym_work="${PWD%/}/"
 # Cache where we keep things that we don't want to regenerate on every
 # invocation.
 tym_cache="${tym_parent}var/cache/tinytium/${CHOST}/"
-# Root of our Portage environment. No, this has no moniker, it's just our
-# root.
+# Root of our Portage environment.
 tym_root="${tym_cache}root/"
 
 
@@ -490,9 +489,10 @@ ebegin 'Determining binaries not built into BusyBox'
 # Extract the names of any udev helpers required, and remove binaries built
 # into BB.
 bins=$(
+	# The names in ${udevrules} are relative to this.
 	cd "${tym_root}lib/udev/rules.d"
-	# Find out the names of the applets built into BusyBox.
-	tar -tf "${tym_root}usr/share/busybox/busybox-links.tar" |
+	# List all the applets built into BusyBox.
+	"${tym_root}bin/busybox" --list |
 	awk -v sBins="${bins}" '
 		BEGIN {
 			iArgBBApplets = ARGC - 1
@@ -522,8 +522,7 @@ bins=$(
 		}
 		# Remove binaries included in BB.
 		ARGIND == iArgBBApplets {
-			# Strip the path, and omit this file from the output.
-			sub(/^.*\//, "")
+			# Omit this file from the output.
 			delete arrBins[$0]
 		}
 		END {
@@ -667,7 +666,12 @@ for src in ${bins} ${deps}; do
 	dst="${tym_work}${dst#usr/}"
 	cp -a "${src}" "${dst}" || eend ${?} || exit
 done
-tar -xf "${tym_root}usr/share/busybox/busybox-links.tar"
+# Make links to the BusyBox applets.
+"${tym_root}bin/busybox" --list |
+while read -r name; do
+	ln -s busybox bin/${name}
+done
+#ls -lR --color=always >/tmp/tym.ls
 eend ${?} || exit
 
 
