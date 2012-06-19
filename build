@@ -85,7 +85,7 @@ busybox_config='
 	-INSTALL_APPLET_HARDLINKS
 	-INSTALL_APPLET_DONT
 	-INSTALL_APPLET_SCRIPT_WRAPPERS
-	-INSTALL_APPLET_SYMLINKS
+	INSTALL_APPLET_SYMLINKS
 	INSTALL_NO_USR
 	-MKFS_EXT2
 	-MKFS_REISER
@@ -357,7 +357,7 @@ adjconfig_busybox() {
 	' <"${1}"
 }
 refbinary_busybox=bin/busybox
-
+USE_busybox='make-symlinks'
 
 # Filters/enriches Dropbear's saved configuration file, making it lighter and
 # ensuring it suits our needs.
@@ -392,8 +392,6 @@ adjconfig_dropbear() {
 	' <"${1}"
 }
 refbinary_dropbear=usr/sbin/dropbeard
-
-
 USE_dropbear='-minimal syslog zlib'
 EXTRA_ECONF_dropbear='
 	--disable-lastlog
@@ -496,10 +494,9 @@ ebegin 'Determining binaries not built into BusyBox'
 # Extract the names of any udev helpers required, and remove binaries built
 # into BB.
 bins=$(
-	# The names in ${udevrules} are relative to this.
 	cd "${tym_root}lib/udev/rules.d"
-	# List all the applets built into BusyBox.
-	"${tym_root}bin/busybox" --list |
+	# List all the symlinks to BusyBox.
+	find "${tym_root}" -lname busybox -printf '%f\n' |
 	awk -v sBins="${bins}" '
 		BEGIN {
 			iArgBBApplets = ARGC - 1
@@ -674,11 +671,10 @@ for src in ${bins} ${deps}; do
 	cp -a "${src}" "${dst}" || eend ${?} || exit
 done
 # Make links to the BusyBox applets.
-"${tym_root}bin/busybox" --list |
-while read -r name; do
-	ln -s busybox bin/${name}
-done
-#ls -lR --color=always >/tmp/tym_pre-ldconfig.ls
+(
+	cd "${tym_root}"
+	find -lname busybox -exec ln -s ../bin/busybox "${tym_work}{}" ";"
+)
 eend ${?} || exit
 
 
