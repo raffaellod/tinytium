@@ -99,7 +99,7 @@ svc_start() {
 		(dhcp)
 			linfo "${itf}: starting udhcpc"
 			if udhcpc -RS -A 5 -i ${itf} \
-				-p /var/run/udhcpc-${itf}.pid \
+				-p /run/udhcpc-${itf}.pid \
 				-s /lib/svc-scripts/udhcpc-event
 			then
 				oneup=true
@@ -126,9 +126,9 @@ svc_stop() {
 	local conf_itf=
 	for itf in $(ifenum); do
 		eval conf_itf=\"\${${itf}}\"
-		if [ -e /var/run/udhcpc-${itf}.pid ]; then
+		if [ -e /run/udhcpc-${itf}.pid ]; then
 			linfo "${itf}: stopping udhcpc"
-			waitkill 30 -f /var/run/udhcpc-${itf}.pid
+			waitkill 30 -f /run/udhcpc-${itf}.pid
 		fi
 		if ifconfig ${itf} | grep -q '^[[:space:]]\+UP\>'; then
 			linfo "${itf}: deconfiguring"

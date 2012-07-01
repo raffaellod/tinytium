@@ -61,7 +61,7 @@ svc_start() {
 	syslogd -S -C512
 	# Also quiets printk's, so as not to clutter the shell.
 	klogd -c 1 -n &
-	echo ${!} >/var/run/klogd.pid
+	echo ${!} >/run/klogd.pid
 	[ -n "${syslog_vt}" ] && (
 		# Give syslogd and klogd some time to set themselves up.
 		sleep 0.25
@@ -86,8 +86,8 @@ svc_stop() {
 		waitkill 1 ${pid}
 		deallocvt ${logread_vt}
 	fi
-	waitkill 1 -f /var/run/klogd.pid
-	waitkill 1 -f /var/run/syslogd.pid
+	waitkill 1 -f /run/klogd.pid
+	waitkill 1 -f /run/syslogd.pid
 	# Restore the default printk verbosity.
 	echo "${def_printk}" >/proc/sys/kernel/printk
 }

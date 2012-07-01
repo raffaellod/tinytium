@@ -70,8 +70,8 @@ die() {
 
 # Waits at most ${1}s for a program to terminate politely, else kills it.
 #   waitkill 5 1706
-#   waitkill 5 -f /var/run/daemon.pid
-#   waitkill 5 -f /var/run/daemon.pid -d
+#   waitkill 5 -f /run/daemon.pid
+#   waitkill 5 -f /run/daemon.pid -d
 #   waitkill 5 -x daemon
 waitkill() {
 	local i=0 pid sig=TERM timeout=$((${1} * 10))
@@ -95,7 +95,7 @@ waitkill() {
 
 
 is_started() {
-	[ -e /var/run/svc/${1:-${SVC_NAME}}.started ]
+	[ -e /run/svc/${1:-${SVC_NAME}}.started ]
 }
 
 
@@ -127,7 +127,7 @@ if [ ${SVC_NAME} = - ]; then
 		# No callback necessary; it will just lock until all *.started
 		# files are deleted.
 		inotifyd true $(
-			ls /var/run/svc/*.started |
+			ls /run/svc/*.started |
 			sed -e 's/$/:d/'
 		)
 		;;
@@ -193,13 +193,13 @@ case "${SVC_ACTION}" in
 
 	if [ ${SVC_ACTION} = stop -o ${SVC_ACTION} = restart ]; then
 		if is_started; then
-			if [ -f /var/run/svc/${SVC_NAME}.clients ]; then
+			if [ -f /run/svc/${SVC_NAME}.clients ]; then
 				# Stop dependant services first.
 				while read dep; do
 					${0} ${dep} stop ||
 						ldie 'could not stop dependant service; aborting stop'
-				done </var/run/svc/${SVC_NAME}.clients
-				rm -f /var/run/svc/${SVC_NAME}.clients
+				done </run/svc/${SVC_NAME}.clients
+				rm -f /run/svc/${SVC_NAME}.clients
 			fi
 			if ! ${configloaded}; then
 				_loadconfig
@@ -208,9 +208,9 @@ case "${SVC_ACTION}" in
 			svc_stop || ldie 'could not stop service'
 			# Unregister this service from its dependencies.
 			for req in ${SVC_NEEDS}; do
-				sed -i -e '/^'${SVC_NAME}'$/ d' /var/run/svc/${req}.clients
+				sed -i -e '/^'${SVC_NAME}'$/ d' /run/svc/${req}.clients
 			done
-			rm -f /var/run/svc/${SVC_NAME}.started
+			rm -f /run/svc/${SVC_NAME}.started
 			linfo 'service stopped'
 		else
 			lwarn 'service was not started'
@@ -225,10 +225,10 @@ case "${SVC_ACTION}" in
 			done
 			${configloaded} || _loadconfig
 			svc_start || ldie 'could not start service'
-			: >/var/run/svc/${SVC_NAME}.started
+			: >/run/svc/${SVC_NAME}.started
 			# Record this service as dependant on its dependencies.
 			for req in ${SVC_NEEDS}; do
-				echo ${SVC_NAME} >>/var/run/svc/${req}.clients
+				echo ${SVC_NAME} >>/run/svc/${req}.clients
 			done
 			linfo 'service started'
 		else
