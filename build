@@ -471,7 +471,7 @@ rooted_libpath="${tym_root}usr/lib:${tym_root}lib:${tym_parent}usr/lib:${tym_par
 
 ebegin 'Creating directories'
 [ ${ARCH} = x86_64 ] && ln -s lib lib64
-mkdir -p bin dev etc/svc newroot proc sys var/run/svc
+mkdir -p bin dev etc/svc newroot proc sys run/svc
 eend ${?} || exit
 
 
