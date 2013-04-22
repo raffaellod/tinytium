@@ -124,11 +124,10 @@ bins="
 "
 # Basic storage-oriented udev rules.
 udevrules='
-	50-firmware.rules
 	50-udev-default.rules
 	60-cdrom_id.rules
 	60-persistent-storage.rules
-	80-drivers.rules
+	64-btrfs.rules
 	95-udev-late.rules
 '
 
@@ -193,7 +192,11 @@ cd "${tym_root}"
 # while allowing for USE and EXTRA_ECONF customizations. See
 # <http://www.gentoo.org/proj/en/base/embedded/handbook/>.
 rooted_emerge_raw() {
-	env ROOT="${tym_root}" \
+	# The variable ARCH was really made for kmake, not portage. Temporarily fix it now.
+	local lARCH=${ARCH}
+	[ ${lARCH} = x86_64 ] && lARCH=amd64
+	env ARCH=${lARCH} \
+		ROOT="${tym_root}" \
 		PORTAGE_CONFIGROOT="${tym_parent}" \
 		FEATURES="-buildpkg -news nodoc noinfo noman ${lFEATURES}" \
 		USE="${lUSE}" \
