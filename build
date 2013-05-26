@@ -29,14 +29,15 @@
 # Gathered from the various scripts in image/ and its subfolders.
 bins_core_bb='
 	awk
+	blkid
 	chvt cttyhack
-	deallocvt
+	dd deallocvt
 	echo
 	false fgconsole
 	ifconfig
 	kill klogd
 	ln logger logread
-	mkdir modprobe mount mv
+	mdev mkdir modprobe mount mv
 	pidof
 	rm route
 	sed setsid sleep stat switch_root syslogd
@@ -49,52 +50,160 @@ bins_core_nobb='
 	dropbear dropbearconvert dropbearkey
 	sh
 	tput
-	udevadm udevd
 '
 # Also gathered from the files mentioned above. Mostly features necessary to get
 # BB applets to behave as expected; for programs excluded due to compatibility
 # issues, see the comments in the files themselves (mainly /init).
 busybox_config='
 	ASH
+	# Job control
 	ASH_JOB_CONTROL
+	# Choose which shell is aliased to bash name = ash
 	-BASH_IS_ASH
+	# Choose which shell is aliased to bash name = hush
 	-BASH_IS_HUSH
+	# Choose which shell is aliased to bash name = none
 	BASH_IS_NONE
-	-BLKID
+	# Print filesystem type
+	FEATURE_BLKID_TYPE
+	# Fancy shell prompts
 	FEATURE_EDITING_FANCY_PROMPT
+	# History saving
+	-FEATURE_EDITING_SAVEHISTORY
+	# Enable echo options (-n and -e)
 	FEATURE_FANCY_ECHO
+	# Enable fractional arguments
 	FEATURE_FLOAT_SLEEP
+	# Enable status reporting output (+7k)
 	FEATURE_IFCONFIG_STATUS
+	# Support running init from within an initrd (not initramfs)
+	-FEATURE_INITRD
+	# Support --install [-s] to install applet links at runtime
+	-FEATURE_INSTALLER
+	# Circular buffer size in Kbytes (minimum 4KB)
 	FEATURE_IPC_SYSLOG
+	# Double buffering
 	-FEATURE_LOGREAD_REDUCED_LOCKING
+	# Support /etc/mdev.conf
+	FEATURE_MDEV_CONF
+	# Support command execution at device addition/removal
+	FEATURE_MDEV_EXEC
+	# Support loading of firmwares
+	FEATURE_MDEV_LOAD_FIRMWARE
+	# Support subdirs/symlinks
+	FEATURE_MDEV_RENAME
+	# Support regular expressions substitutions when renaming device
+	FEATURE_MDEV_RENAME_REGEXP
+	# Blacklist support
 	FEATURE_MODPROBE_BLACKLIST
+	# Support for module.aliases file
 	FEATURE_MODUTILS_ALIAS
+	# Support for module.symbols file
 	FEATURE_MODUTILS_SYMBOLS
+	# Support option -f
+	FEATURE_MOUNT_FAKE
+	# Support lots of -o flags in mount
+	FEATURE_MOUNT_FLAGS
+	# Support /etc/fstab and -a
+	FEATURE_MOUNT_FSTAB
+	# Support mount helpers
+	FEATURE_MOUNT_HELPERS
+	# Support specifying devices by label or UUID
+	FEATURE_MOUNT_LABEL
+	# Support loopback mounts
+	FEATURE_MOUNT_LOOP
+	# Create new loopback devices if needed
+	FEATURE_MOUNT_LOOP_CREATE
+	# Support option -v
+	FEATURE_MOUNT_VERBOSE
+	# Support for the old /etc/mtab file
+	-FEATURE_MTAB_SUPPORT
+	# Remote Log support
 	-FEATURE_REMOTE_LOG
+	# Rotate message files
 	-FEATURE_ROTATE_LOGFILE
+	# Hide message on interactive shell startup
 	FEATURE_SH_EXTRA_QUIET
+	# Choose which shell is aliased to sh name = ash
 	FEATURE_SH_IS_ASH
+	# Choose which shell is aliased to sh name = hush
 	-FEATURE_SH_IS_HUSH
+	# Choose which shell is aliased to sh name = none
 	-FEATURE_SH_IS_NONE
+	# Run nofork applets directly
 	FEATURE_SH_NOFORK
+	# Enable custom formats (-c)
 	FEATURE_STAT_FORMAT
+	# Support option -a
+	FEATURE_UMOUNT_ALL
+	# Support -D (drop dups) option
 	-FEATURE_SYSLOGD_DUP
-	-GINIT
+	# Username completion
+	-FEATURE_USERNAME_COMPLETION
+	# Ext filesystem
+	FEATURE_VOLUMEID_EXT
+	# btrfs filesystem
+	FEATURE_VOLUMEID_BTRFS
+	# Reiser filesystem
+	FEATURE_VOLUMEID_REISERFS
+	# fat filesystem
+	FEATURE_VOLUMEID_FAT
+	# hfs filesystem
+	FEATURE_VOLUMEID_HFS
+	# jfs filesystem
+	FEATURE_VOLUMEID_JFS
+	# xfs filesystem
+	FEATURE_VOLUMEID_XFS
+	# ntfs filesystem
+	FEATURE_VOLUMEID_NTFS
+	# iso9660 filesystem
+	FEATURE_VOLUMEID_ISO9660
+	# udf filesystem
+	FEATURE_VOLUMEID_UDF
+	# luks filesystem
+	FEATURE_VOLUMEID_LUKS
+	# linux swap filesystem
+	FEATURE_VOLUMEID_LINUXSWAP
+	# cramfs filesystem
+	FEATURE_VOLUMEID_CRAMFS
+	# romfs filesystem
+	FEATURE_VOLUMEID_ROMFS
+	# sysv filesystem
+	FEATURE_VOLUMEID_SYSV
+	# ocfs2 filesystem
+	FEATURE_VOLUMEID_OCFS2
+	# linuxraid
+	FEATURE_VOLUMEID_LINUXRAID
+	# Not really necessary, but it breaks if omitted.
+	GINIT
+	# hush
 	-HUSH
+	# What kind of applet links to install = as hard-links
 	-INSTALL_APPLET_HARDLINKS
+	# What kind of applet links to install = not installed
 	-INSTALL_APPLET_DONT
+	# What kind of applet links to install = as script wrappers
 	-INSTALL_APPLET_SCRIPT_WRAPPERS
+	# What kind of applet links to install = as soft-links
 	INSTALL_APPLET_SYMLINKS
+	# Do not use /usr
 	INSTALL_NO_USR
 	-MKFS_EXT2
 	-MKFS_REISER
 	-MKFS_VFAT
-	-MDEV
+	# Simplified modutils
 	-MODPROBE_SMALL
-	-MOUNT
+	# Support for PAM (Pluggable Authentication Modules)
+	-PAM
+	# pivot_root
+	-PIVOT_ROOT
+	# POSIX math support
 	SH_MATH_SUPPORT
-	-SWITCH_ROOT
-	-UMOUNT
+	-START_STOP_DAEMON
+	# Use internal password and group functions rather than system functions
+	-USE_BB_PWD_GRP
+	# volumeid
+	VOLUMEID
 '
 # Useful programs to fix disks/filesystems.
 bins_disk_extfs='
@@ -109,7 +218,6 @@ bins_disk_extfs='
 	tune2fs
 '
 bins_disk="
-	dd
 	${bins_disk_extfs}
 "
 # Core commands + BusyBox + other useful stuff.
@@ -120,15 +228,6 @@ bins="
 	nano
 	${bins_disk}
 "
-# Basic storage-oriented udev rules.
-udevrules='
-	50-udev-default.rules
-	60-cdrom_id.rules
-	60-persistent-storage.rules
-	64-btrfs.rules
-	95-udev-late.rules
-'
-
 
 
 # Bulk-exports Portage environment variables into our actual environment, mostly
@@ -336,14 +435,22 @@ adjconfig_busybox() {
 	    -v sConfig="${busybox_config}" \
 	'
 		BEGIN {
-			# Assume that each applet has a corresponding CONFIG_ option. Also,
+			# Assume that each applet has a corresponding CONFIG_ option.
+			sApplets = toupper(sApplets)
+			gsub(/[[:space:]]+/, "\n", sApplets)
 			# sConfig goes last, to override sApplets.
-			sConfig = toupper(sApplets) " " sConfig
-			sub(/^[[:space:]]+/, "", sConfig)
-			sub(/[[:space:]]+$/, "", sConfig)
-			split(sConfig, arrConfig, /[[:space:]]+/)
+			sConfig = sApplets "\n" sConfig
+			# Split on newlines.
+			split(sConfig, arrConfig, /\n+/)
 			for (i in arrConfig) {
 				s = arrConfig[i]
+				# Trim whitespace on both sides of the string.
+				sub(/^[[:space:]]+/, "", s)
+				sub(/[[:space:]]+$/, "", s)
+				# Skip empty lines and comments.
+				if (length(s) == 0 || substr(s, 1, 1) == "#")
+					continue
+				# sub() will return 0 or 1 here.
 				bDisable = sub(/^-/, "", s)
 				# Assume bDisable == 0, for now: we want to find a "not set" entry
 				# and replace it with an "=y" entry.
@@ -427,20 +534,6 @@ EXTRA_ECONF_nano='
 	--disable-wrapping
 '
 
-EXTRA_ECONF_util_linux='
-	--disable-uuidd
-	--disable-agetty
-	--disable-cramfs
-	--disable-pivot_root
-	--disable-unshare
-	--disable-partx
-	--disable-raw
-	--disable-rdev
-	--disable-rename
-	--disable-schedutils
-	--disable-write
-'
-
 EXTRA_ECONF_e2fsprogs='
 	--enable-symlink-install
 '
@@ -452,13 +545,11 @@ EXTRA_ECONF_ncurses='
 
 #true ||
 rooted_emerge \
+	sys-libs/ncurses \
 	net-misc/dropbear \
 	sys-apps/busybox \
 	app-editors/nano \
-	sys-apps/util-linux \
-	sys-fs/e2fsprogs \
-	sys-fs/udev \
-	sys-libs/ncurses
+	sys-fs/e2fsprogs
 
 eend ${?} || exit
 
@@ -494,25 +585,13 @@ cp -a "${tym_root}etc/terminfo" lib/
 eend ${?} || exit
 
 
-ebegin 'Adding udev rules'
-mkdir -p lib/udev/rules.d
-(
-	cd "${tym_root}lib/udev/rules.d/${f}"
-	cp -a ${udevrules} "${tym_work}lib/udev/rules.d"
-)
-eend ${?} || exit
-
-
 ebegin 'Determining binaries not built into BusyBox'
-# Extract the names of any udev helpers required, and remove binaries built into
-# BB.
+# Remove binaries built into BB.
 bins=$(
-	cd "${tym_root}lib/udev/rules.d"
 	# List all the symlinks to BusyBox.
 	find "${tym_root}" -lname busybox -printf '%f\n' |
 	awk -v sBins="${bins}" '
 		BEGIN {
-			iArgBBApplets = ARGC - 1
 			# Import currently selected binaries.
 			sub(/^[[:space:]]+/, "", sBins)
 			sub(/[[:space:]]+$/, "", sBins)
@@ -520,26 +599,8 @@ bins=$(
 			for (i in arrBinNames)
 				arrBins[arrBinNames[i]] = 1
 		}
-		ARGIND != iArgBBApplets &&
-		sub(/^.*(RUN|IMPORT{program})\+?="/, "") {
-			# Only take the command name.
-			match($0, /^[^" ]*/)
-			sBin = substr($0, 1, RLENGTH)
-			# Exclude env var references.
-			if (substr(sBin, 1, 5) == "$env{")
-				next
-			# Strip the path, and hope that BB uses the same absolute paths udev
-			# expects.
-			if (sub(/^.*\//, "", sBin))
-				# 1 == name only.
-				arrBins[sBin] = 1
-			else
-				# 2 == relative path.
-				arrBins["lib/udev/" sBin] = 2
-		}
 		# Remove binaries included in BB.
-		ARGIND == iArgBBApplets {
-			# Omit this file from the output.
+		{
 			delete arrBins[$0]
 		}
 		END {
@@ -548,7 +609,7 @@ bins=$(
 				# Print type and name.
 				print arrBins[sBin] " " sBin
 		}
-	' ${udevrules} - |
+	' |
 	while read -r type name; do
 		if [ ${type} -eq 1 ]; then
 			# 1 == name only: find out its full path.
@@ -721,6 +782,7 @@ ln -s ../proc/mounts etc/mtab
 
 # If not using glibc, /etc/nsswitch is not necessary.
 [ ${ELIBC} != glibc ] && rm etc/nsswitch.conf
+
 
 # Creates the basic users/groups in the files /etc/passwd, /etc/group and so on.
 config_create_users_and_groups() {

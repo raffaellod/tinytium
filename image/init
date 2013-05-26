@@ -35,19 +35,12 @@
 #   rootflags=...
 #   rootfstype=...
 #   rw
-#   tym:break={cmdline,udev,trigger,settle,resume,mount,pre-init,init},...
+#   tym:break={cmdline,devs-coldplug,devs-modprobe,devs-wait,resume,mount,
+#              pre-init,init},...
 #   tym:errors={panic*,shell,ssh}
 #   tym:logvt=[n]
 #   tym:net.eth0=dhcp
 #   tym:net.eth1=192.168.1.10/24,gw=192.168.1.1
-
-# Compatibility notes on BusyBox's applets:
-# - blkid doesn't cooperate well with udev, and will result in root=UUID=...
-#   failures due to the absence of /dev/disk/by-uuid.
-# - mount won't resolve symlinks, so /proc/mounts will list /dev/disk/by-...
-#   instead of the much shorter /dev/sda1.
-# - switch_root seems to mount /dev read-only, which makes the Gentoo's boot
-#   process fail miserably.
 
 
 # Poor man's sed s///g.
@@ -110,12 +103,46 @@ shellonbreak() {
 
 # Basic initial setup.
 
+mount_devtmpfs() {
+	if fstabinfo --quiet /dev; then
+		mount -n /dev
+	else
+		mount -n -t tmpfs -o "exec,nosuid,mode=0755,size=8M" mdev /dev
+
+		# creating /dev/console and /dev/tty1 to be able to write
+		# to $CONSOLE with/without bootsplash before mdev creates it
+		[ -c /dev/console ] || mknod /dev/console c 5 1
+		[ -c /dev/tty1 ] || mknod /dev/tty1 c 4 1
+
+		# udevd will dup its stdin/stdout/stderr to /dev/null
+		# and we do not want a file which gets buffered in ram
+		[ -c /dev/null ] || mknod /dev/null c 1 3
+
+		# copy over any persistant things
+		if [ -d /lib/mdev/devices ] ; then
+			cp -RPp /lib/mdev/devices/* /dev 2>/dev/null
+		fi
+
+		# Not provided by sysfs but needed
+		ln -snf /proc/self/fd /dev/fd
+		ln -snf fd/0 /dev/stdin
+		ln -snf fd/1 /dev/stdout
+		ln -snf fd/2 /dev/stderr
+		[ -e /proc/kcore ] && ln -snf /proc/kcore /dev/core
+
+		# Create problematic directories
+		mkdir -p /dev/pts /dev/shm
+	fi
+}
+
+
 export PATH=/bin:/sbin
 mount -n -t proc /proc /proc
 mount -n -t sysfs /sys /sys
-mount -n -t devtmpfs -o mode=0755,size=8M udev /dev
+mount -n -t devtmpfs -o mode=0755,size=4M devtmpfs /dev
 mkdir /dev/pts
 mount -n -t devpts -o gid=5,mode=620 devpts /dev/pts
+mkdir /dev/disk /dev/disk/by-label /dev/disk/by-uuid
 
 
 # Kernel command line processing functions.
@@ -168,49 +195,76 @@ case "${root}" in
 	panic "don't know how to handle \`root=${root}'"
 	;;
 esac
-getarg rw && baserflags=rw || baserflags=ro
-getargv rootflags
-allrflags=${baserflags}${rootflags:+,${rootflags}}
-getargv rootfstype || rootfstype=auto
-udev_wait_root=true
+# Create the /dev/resume symlink, and remember to wait for it.
+ln -s "${root#/dev/}" /dev/root
+devs_waiting_for_root=true
 
 
 # Determine whether to resume the system from hibernation.
-udev_wait_resume=false
-if ! getarg noresume; then
-	if getargv resume; then
-		case "${resume}" in
-		(LABEL=?*)
-			strsubst resume '/' '\x2f'
-			resume=/dev/disk/by-label/${resume#LABEL=}
-			;;
-		(UUID=?*)
-			resume=/dev/disk/by-uuid/${resume#UUID=}
-			;;
-		(/dev/?*)
-			;;
-		(*)
-			panic "don't know how to handle \`resume=${resume}'"
-			;;
-		esac
-		# Don't forget to wait for it.
-		udev_wait_resume=true
-	else
-		# Symlink the first hibernation resume image found to /dev/resume.
-		echo "SUBSYSTEM==\"block\", ACTION==\"add|change\", ENV{ID_FS_TYPE}==\"suspend|swsuspend\", SYMLINK+=\"resume\"" \
-			>/lib/udev/rules.d/99-resume.rules
-	fi
+devs_waiting_for_resume=false
+unset resume
+if ! getarg noresume && getargv resume; then
+	case "${resume}" in
+	(LABEL=?*)
+		strsubst resume '/' '\x2f'
+		resume=/dev/disk/by-label/${resume#LABEL=}
+		;;
+	(UUID=?*)
+		resume=/dev/disk/by-uuid/${resume#UUID=}
+		;;
+	(/dev/?*)
+		;;
+	(*)
+		panic "don't know how to handle \`resume=${resume}'"
+		;;
+	esac
+	# Create the /dev/resume symlink, and remember to wait for it.
+	ln -s ${resume#/dev/} /dev/resume
+	devs_waiting_for_resume=true
 fi
 
 
-# Start up udev and trigger cold plugs...
-shellonbreak udev
-udevd --daemon --resolve-names=never
-# ...then the rest.
-shellonbreak trigger
-udevadm trigger --action=add
+# Enumerate module aliases for the devices in the system.
+# TODO: parallelism, maybe merge with code below using the output.
+find /sys -name modalias -exec cat \{\} + |
+awk '
+	{
+		# This merges duplicate lines on top of each other.
+		arrAliases[$0] = 1
+	}
+	END {
+		for (sAlias in arrAliases)
+			print sAlias
+	}
+' >/modaliases.lst
 
-# And now, a few simple tasks to give udev some time.
+# Populate /dev with existing devices from /sys
+shellonbreak devs-coldplug
+mdev -s
+
+shellonbreak devs-modprobe
+# Setup the kernel hotplug handler.
+[ -e /proc/sys/kernel/hotplug ] && echo /sbin/mdev >/proc/sys/kernel/hotplug
+# Load the modules for every device.
+while read -r modalias; do
+	# Ignore errors due to missing/excluded/blacklisted (TODO) modules.
+	# TODO: parallelism.
+	modprobe ${modalias} 2>/dev/null
+done </modaliases.lst
+
+
+# And now, a few simple tasks to kill some time while we wait for the devices.
+
+# Generates the initial root mount options.
+cmdline_get_root_mount_opts() {
+	getarg rw && baserootflags=rw || baserootflags=ro
+	getargv rootflags
+	allrootflags=${baserootflags}${rootflags:+,${rootflags}}
+	getargv rootfstype || rootfstype=auto
+}
+
+cmdline_get_root_mount_opts
+
 
 # Determines if the kernel supports SELinux.
 detect_selinux_support() {
@@ -248,101 +302,92 @@ cmdline_get_init_args() {
 cmdline_get_init_args
 
 
-# End simple tasks. Now just plain busy waiting.
+# End of simple tasks. Now just plain busy waiting.
 
-udev_wait_finished() {
-	# If the root or resume devices show up, stop waiting for them, and make
-	# sure they're symlinked.
-	if ${udev_wait_root}; then
-		if [ -e ${root} ]; then
-			root=$(readlink -f ${root})
-			ln -fs ${root#/dev/} /dev/root
-		fi
-		[ -e /dev/root ] && udev_wait_root=false
-	fi
-	if ${udev_wait_resume}; then
-		if [ -e ${resume} ]; then
-			resume=$(readlink -f ${resume})
-			ln -fs ${resume#/dev/} /dev/resume
-		fi
-		[ -e /dev/resume ] && udev_wait_resume=false
-	fi
-	# Report whether all waits are over.
-	! ${udev_wait_root} && ! ${udev_wait_resume}
+# Extract the target (recursively resolved) of the /dev/root link into the
+# ${root} variable.
+get_root_from_symlink() {
+	[ -L /dev/root ] && root="$(readlink -f /dev/root)"
 }
 
-shellonbreak settle
+# Extract the target (recursively resolved) of the /dev/resume link into the
+# ${resume} variable.
+get_resume_from_symlink() {
+	[ -L /dev/resume ] && resume="$(readlink -f /dev/resume)"
+}
+
+# Checks whether the wait for devices is over.
+devs_wait_is_over() {
+	# If a device we were wating for becomes available, stop waiting for it.
+	if ${devs_waiting_for_root} && [ -e /dev/root ]; then
+		devs_waiting_for_root=false
+	fi
+	if ${devs_waiting_for_resume} && [ -e /dev/resume ]; then
+		devs_waiting_for_resume=false
+	fi
+	# Report whether all waits are over.
+	! ${devs_waiting_for_root} && ! ${devs_waiting_for_resume}
+}
+
+shellonbreak devs-wait
 i=0
 while :; do
 	# Check for really quick devices.
-	udev_wait_finished && break
+	devs_wait_is_over && break
 
-	# Give udev a few more seconds, then check again.
-	udevadm settle --timeout=60
-	udev_wait_finished && break
-
-	# Wait for asynchronous SCSI device scanning, then check again.
-	modprobe scsi_wait_scan && modprobe -r scsi_wait_scan
-	udev_wait_finished && break
-
-	# Check if that stimulated any new events, at least.
-	if udevadm settle --timeout=0; then
-		# udev seems to be idle. Let's repeat this for an additional 10s before
-		# calling for user intervention.
-		sleep 0.5
-		i=$((${i} + 1))
-		# In messages, give priority to root.
-		if ${udev_wait_root}; then
-			d=${root}
-			l=/dev/root
-			s='root'
-		else
-			d=${resume}
-			l=/dev/resume
-			s='resume image'
-		fi
-		if [ ${i} -lt 20 ]; then
-			# Print something every now and then (3s).
-			[ $((${i} % 6)) -eq 0 ] && info "waiting for ${d} ..."
-		else
-			error "cannot find the ${s} device" \
-				'You can either wait a little longer, if you are sure that' \
-				"  ${d}" \
-				"is the correct ${s} device and will eventually come online, or you can" \
-				"create a symlink from ${l} to the correct device."
-
-			# Now, if the user created /dev/root as a symlink, but left our
-			# ${root} still non-existent, we have to do the reverse of
-			# udev_wait_finished.
-			${udev_wait_root} && [ -e /dev/root ] &&
-				root=$(readlink -f /dev/root) &&
-				udev_wait_root=false
-			# ${resume} instead, can be updated later.
-			${udev_wait_resume} && [ -e /dev/resume ] &&
-				udev_wait_resume=false
-			# If the wait is over, quit the loop.
-			! ${udev_wait_root} && ! ${udev_wait_resume} && break
-		fi
+	# One or more devices is not online yet. Let's repeat this for an additional
+	# 10s before calling for user intervention.
+	sleep 0.25
+	# In messages, give priority to root.
+	if ${devs_waiting_for_root}; then
+		link=/dev/root
+		desc='root'
+	elif ${devs_waiting_for_resume}; then
+		link=/dev/resume
+		desc='hibernation image'
+	fi
+	dev=$(readlink ${link})
+	if [ $((++${i})) -eq 40 ]; then
+		# Number of attempts exceeded.
+		error "cannot find the ${desc} device" \
+			'You can either wait a little longer, if you are sure that' \
+			"  ${dev}" \
+			"is the correct ${desc} device and will eventually come online, or you can" \
+			"create a symlink from ${link} to the correct device."
+		# Now that we're back, resume from the beginning of the loop.
+		i=0
+	elif [ $((${i} % 12)) -eq 0 ]; then
+		# Print something every now and then (3s).
+		info "waiting for ${dev} ..."
 	fi
 done
 
 
 # Try to resume the system.
 shellonbreak resume
-if [ -e /dev/resume ]; then
-	# ${resume} can be empty (/dev/resume created by udev), or wrong
-	# (/dev/resume created by manual intervention).
-	[ -n "${resume}" ] || resume=$(readlink -f /dev/resume)
+get_resume_from_symlink
+if [ -n "${resume}" ]; then
 	info "resuming system from hibernation image in ${resume}"
-	resume=$(stat -Lc'%t %T' ${resume})
-	echo "$((0x${resume% *})):$((0x${resume#* }))" >/sys/power/resume
+	signature=$(swap_signature "${resume}")
+	case "${signature}" in
+	(S[1-2]SUSPEND)
+		# Kernel suspend, use sysfs.
+		resume=$(stat -Lc'%t %T' "${resume}")
+		echo "$((0x${resume% *})):$((0x${resume#* }))" >/sys/power/resume
+		;;
+	(ULSUSPEND)
+		# TODO: does this work? Need to test swsusp.
+		/sbin/resume -r "${resume}"
+		;;
+	esac
 fi
 
 
 # Try to mount the root filesystem.
 shellonbreak mount
-info "mounting ${root} (type: ${rootfstype}, options: ${allrflags})"
-if ! mount -n -t ${rootfstype} -o ${allrflags} ${root} /newroot; then
+get_root_from_symlink
+info "mounting ${root} (type: ${rootfstype}, options: ${allrootflags})"
+if ! mount -n -t ${rootfstype} -o "${allrootflags}" "${root}" /newroot; then
 	error "unable to mount ${root} as root" \
 		'You have to mount /newroot manually.'
 	# Check which device was mounted by the user as /newroot, so we can remount
@@ -351,7 +396,8 @@ if ! mount -n -t ${rootfstype} -o ${allrflags} ${root} /newroot; then
 	while read -r dev mp rest; do
 		if [ ${mp} = /newroot ]; then
 			root=${dev}
-			ln -fs ${root#/dev/} /dev/root
+			# Also make sure it's symlinked by /dev/root.
+			[ /dev/root -ef "${root}" ] || ln -fs "${root#/dev/}" /dev/root
 			break
 		fi
 	done </proc/mounts
@@ -381,10 +427,10 @@ if [ -z "${rootflags}" -a -f /newroot/etc/fstab ]; then
 		rootflags=${rootflags%,}
 		# If there are still any options left, use them.
 		if [ -n "${rootflags}" ]; then
-			allrflags=${baserootflags},${rootflags}
-			info "remounting ${root} (type: ${rootfstype}, options: ${allrflags})"
+			allrootflags=${baserootflags},${rootflags}
+			info "remounting ${root} (type: ${rootfstype}, options: ${allrootflags})"
 			umount /newroot
-			if ! mount -n -t ${rootfstype} -o "${allrflags}" "${root}" /newroot; then
+			if ! mount -n -t ${rootfstype} -o "${allrootflags}" "${root}" /newroot; then
 				error "unable to remount ${root} as root" \
 					'You will have to remount it manually.'
 			fi
@@ -409,20 +455,27 @@ if ${selinuxsupp}; then
 	: # TODO: load SELinux policy.
 fi
 
-# Stop udev, else terminate it, else kill it.
-udevadm control --stop-exec-queue
-sig=TERM
-while pids=$(pidof udevd); do
-	for pid in ${pids}; do
-		kill -${sig} ${pid} 2>/dev/null
+# Terminates any mdev-related activity.
+mdev_quit() {
+	# Remove the kernel hotplug handler.
+	[ -e /proc/sys/kernel/hotplug ] && echo '' >/proc/sys/kernel/hotplug
+	# Wait until all mdev processes have quit.
+	while pids=$(pidof mdev); do
+		for pid in ${pids}; do
+			kill -TERM ${pid} 2>/dev/null
+		done
 	done
-	sig=KILL
-done
+}
+
+mdev_quit
 
 
 shellonbreak init
 
 info 'switching root'
+mount -o move /sys /newroot/sys &&
+mount -o move /proc /newroot/proc &&
+mount -o move /dev /newroot/dev &&
 exec switch_root /newroot ${init} ${initargs}
 # Fall through...
 error 'unable to switch to the requested root'

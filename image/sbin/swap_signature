@@ -1,0 +1,30 @@
+#!/bin/sh
+# -*- coding: utf-8; mode: sh; tab-width: 3 -*-
+#-------------------------------------------------------------------------------
+# Tinytium
+# Copyright 2013 Raffaello D. Di Napoli
+#-------------------------------------------------------------------------------
+# This file is part of Tinytium.
+#
+# Tinytium is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# Tinytium. If not, see <http://www.gnu.org/licenses/>.
+#-------------------------------------------------------------------------------
+# One-liner that outputs the signature   _____ _              _   _
+# of a swap partition. Used to detect   |_   _|_)____  _   __| |_(_)_   _ ____
+# hibernation images.                     | | | |  _ \| | | |   _| | | | |    \
+#                                         | | | | | \ | \_/ || |_| | \_| | | | |
+#                                         |_| |_|_| |_|\__, |\___|_|\____|_|_|_|
+#                                                      (___/
+#-------------------------------------------------------------------------------
+
+dd if=${1} bs=1 skip=4086 count=9 2>/dev/null
+
