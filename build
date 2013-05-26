@@ -292,8 +292,8 @@ rooted_emerge() {
 				fi
 			fi
 			if ${needs_emerge} || ${force_emerge}; then
-				# Rename the adjusted configuration so that emerge will use it,
-				# but preserve a possibly existing same-name savedconfig.
+				# Rename the adjusted configuration so that emerge will use it, but
+				# preserve a possibly existing same-name savedconfig.
 				if [ -f "${config_bestavail}" ]; then
 					mv -f "${config_bestavail}" "${config_bestavail}-notym"
 				fi
@@ -310,12 +310,14 @@ rooted_emerge() {
 
 		if [ -n "${refbin}" ]; then
 			if ${needs_emerge} || ${force_emerge}; then
-				# Delete the adjusted saved configuration, and restore the
-				# previous file, if any.
-				rm -f "${config_bestavail}"
+				# Rename the adjusted saved configuration to avoid affecting the
+				# parent environment, and restore the previous one, if any.
+				mv -f "${config_bestavail}" "${config_any}-tym"
 				if [ -f "${config_bestavail}-notym" ]; then
 					mv -f "${config_bestavail}-notym" "${config_bestavail}"
 				fi
+				# Delete the file abandoned by savedconfig.eclass.
+				rm -f "${tym_root}etc/portage/savedconfig/${pkg_bestavail}"
 			fi
 			unset refbin
 		fi
