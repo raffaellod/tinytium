@@ -191,11 +191,9 @@ cd "${tym_root}"
 # allowing for USE and EXTRA_ECONF customizations. See
 # <http://www.gentoo.org/proj/en/base/embedded/handbook/>.
 rooted_emerge_raw() {
-	# The variable ARCH was really made for kmake, not portage. Temporarily fix
-	# it now.
-	local lARCH=${ARCH}
-	[ ${lARCH} = x86_64 ] && lARCH=amd64
-	env ARCH=${lARCH} \
+	# The variable ARCH that's in the environment right now is for kmake, not
+	# Portage; the correct variable is PORTAGE_ARCH.
+	env ARCH=${PORTAGE_ARCH} \
 		ROOT="${tym_root}" \
 		PORTAGE_CONFIGROOT="${tym_parent}" \
 		FEATURES="-buildpkg -news nodoc noinfo noman ${lFEATURES}" \
