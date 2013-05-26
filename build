@@ -1,33 +1,32 @@
 #!/bin/sh
 # -*- coding: utf-8; mode: sh; tab-width: 3 -*-
-#--------------------------------------------------------------------------- #
-# Tinytium																						  #
-# Copyright 2012 Raffaello D. Di Napoli												  #
-# -------------------------------------------------------------------------- #
-# This file is part of Tinytium.															  #
-#																									  #
-# Tinytium is free software: you can redistribute it and/or modify it under  #
-# the terms of the GNU General Public License as published by the Free		  #
-# Software Foundation, either version 3 of the License, or (at your option)  #
-# any later version.																			  #
-#																									  #
-# Tinytium is distributed in the hope that it will be useful, but WITHOUT	  #
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or		  #
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for	  #
-# more details.																				  #
-#																									  #
-# You should have received a copy of the GNU General Public License along	  #
-# with Tinytium. If not, see <http://www.gnu.org/licenses/>.					  #
-# -------------------------------------------------------------------------- #
-# Image generation script for        _____ _              _   _				  #
-# Tinytium.                         |_   _|_)____  _   __| |_(_)_   _ ____	  #
-#                                     | | | |  _ \| | | |   _| | | | |    \  #
-# It doesn't make assumptions on      | | | | | \ | \_/ || |_| | \_| | | | | #
-# what/who invoked it; will use       |_| |_|_| |_|\__, |\___|_|\____|_|_|_| #
-# ${PWD} as scratchpad directory.                  (___/							  #
-# -------------------------------------------------------------------------- #
+#-------------------------------------------------------------------------------
+# Tinytium
+# Copyright 2012-2013 Raffaello D. Di Napoli
+#-------------------------------------------------------------------------------
+# This file is part of Tinytium.
+#
+# Tinytium is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# Tinytium. If not, see <http://www.gnu.org/licenses/>.
+#-------------------------------------------------------------------------------
+# Image generation script for Tinytium.  _____ _              _   _
+#                                       |_   _|_)____  _   __| |_(_)_   _ ____
+# No assumptions are made on what/who     | | | |  _ \| | | |   _| | | | |    \
+# invoked this program; ${PWD} will be    | | | | | \ | \_/ || |_| | \_| | | | |
+# used as scratchpad directory.           |_| |_|_| |_|\__, |\___|_|\____|_|_|_|
+#                                                      (___/
+#-------------------------------------------------------------------------------
 
-# Gathered from the various scripts in image and its subfolders.
+# Gathered from the various scripts in image/ and its subfolders.
 bins_core_bb='
 	awk
 	chvt cttyhack
@@ -44,18 +43,17 @@ bins_core_bb='
 	test true
 	udhcpc umount
 '
-# Same as above, but not provided by BB (i.e. no config option for them), or
-# not fully compatible in BB's implementation.
+# Same as above, but not provided by BB (i.e. no config option for them), or not
+# fully compatible in BB's implementation.
 bins_core_nobb='
 	dropbear dropbearconvert dropbearkey
 	sh
 	tput
 	udevadm udevd
 '
-# Also gathered from the files mentioned above. Mostly features necessary to
-# get BB applets to behave like expected; for programs excluded due to
-# compatibility issues, see the comments in the files themselves (mainly
-# /init).
+# Also gathered from the files mentioned above. Mostly features necessary to get
+# BB applets to behave as expected; for programs excluded due to compatibility
+# issues, see the comments in the files themselves (mainly /init).
 busybox_config='
 	ASH
 	ASH_JOB_CONTROL
@@ -132,8 +130,9 @@ udevrules='
 '
 
 
-# Bulk-exports Portage environment variables into our actual environment,
-# mostly to feed them back to Portage after we switch to our make.conf .
+
+# Bulk-exports Portage environment variables into our actual environment, mostly
+# to feed them back to Portage after we switch to our make.conf .
 portage_export() {
 	local vars
 	vars=$(
@@ -151,8 +150,8 @@ portage_export() {
 
 
 # Don't assume that / is managed by Portage; / will be the "root environment".
-# Also, don't assume we're being called by kernel-gen, so let's find out
-# ${ROOT} indipendently.
+# Also, don't assume we're being called by kernel-gen, so let's find out ${ROOT}
+# independently.
 portage_export ROOT CHOST
 # This is the "parent (Portage) environment" from which the toolchain will be
 # borrowed.
@@ -170,7 +169,7 @@ tym_root="${tym_cache}root/"
 
 
 
-# Start of emerge phase. #####################################################
+# Start of emerge phase. #######################################################
 
 
 
@@ -188,11 +187,12 @@ if [ ! -d "${tym_root}" ]; then
 fi
 cd "${tym_root}"
 
-# Deploy the files in our root, using the parent's Portage configuration,
-# while allowing for USE and EXTRA_ECONF customizations. See
+# Deploy the files in our root, using the parent's Portage configuration, while
+# allowing for USE and EXTRA_ECONF customizations. See
 # <http://www.gentoo.org/proj/en/base/embedded/handbook/>.
 rooted_emerge_raw() {
-	# The variable ARCH was really made for kmake, not portage. Temporarily fix it now.
+	# The variable ARCH was really made for kmake, not portage. Temporarily fix
+	# it now.
 	local lARCH=${ARCH}
 	[ ${lARCH} = x86_64 ] && lARCH=amd64
 	env ARCH=${lARCH} \
@@ -210,14 +210,16 @@ rooted_emerge_raw_q() {
 #	rooted_emerge_raw -v "${@}"
 }
 
-# Re-emerges each specified package, if necessary. If a vabiable named
-# refbinary_<packagename> exists, its value is a file (part of the package)
-# whose last modification time is compared to that of an existing saved
-# configuration file (saved by USE=savedconfig); in case the latter is newer,
-# the package will be re-emerged. In case of packages using savedconfig, the
-# configuration is temporarily adjusted for Tinytium's purposes.
+# Re-emerges each specified package, if necessary. If a variable named
+# refbin_<packagename> exists, its value is a file (part of the package) whose
+# last modification time is compared to that of an existing saved configuration
+# file (saved by USE=savedconfig); in case the latter is newer, the package will
+# be re-emerged. In case of packages using savedconfig, the configuration is
+# temporarily adjusted for Tinytium's purposes.
 rooted_emerge() {
-	local pn ret
+	local pn ret var lFEATURES force_emerge needs_emerge refbin
+	local config_any pkg_bestavail pkg_bestinst config_bestavail config_bestinst
+
 	for pkg; do
 		pn=$(echo ${pkg#*/} | sed -e 's/-/_/g')
 
@@ -225,60 +227,66 @@ rooted_emerge() {
 		for var in USE EXTRA_ECONF; do
 			eval l${var}=\"\${${var}} \${${var}_${pn}}\"
 		done
+		# This is NOT local.
 		lUSE="-* ipv6 minimal unicode ${lUSE}"
-
-		local refbinary needs_emerge force_emerge lFEATURES=notitles
 
 		# Check if this is a savedconfig ebuild, and enable USE=savedconfig if
 		# appropriate.
-		eval refbinary=\"\${refbinary_${pn}}\"
-		[ -n ${refbinary} ] && lUSE="${lUSE} savedconfig"
+		eval refbin=\"\${refbin_${pn}}\"
+		[ -n ${refbin} ] && lUSE="${lUSE} savedconfig"
 
 		# Find out if the cached installed version needs to be updated.
+		lFEATURES=notitles
 		[ -n "$(rooted_emerge_raw -pquNO ${pkg})" ] &&
 			needs_emerge=true || needs_emerge=false
-		unset lFEATURES
+		lFEATURES=
 
-		if [ -n "${refbinary}" ]; then
-			local pkg_bestinst pkg_bestavail config_any="${savedconfigs}${pkg}"
+		# Check if there is a savedconfig that can be newer than the reference
+		# binary, in case of which we'll need to re-emerge even if no update is
+		# needed.
+		if [ -z "${refbin}" ]; then
+			force_emerge=false
+		else
+			config_any=${savedconfigs}${pkg}
 			# Ensure that the category's savedconfig directory exists.
 			mkdir -p "${config_any%/*}"
 			# Find out which version is currently installed, if any.
 			pkg_bestinst=$(portageq best_version "${tym_parent}" ${pkg})
-			local config_bestinst="${savedconfigs}${pkg_bestinst}"
+			config_bestinst=${savedconfigs}${pkg_bestinst}
 			# Find out which version would be installed.
 			pkg_bestavail=$(portageq best_visible "${tym_parent}" ${pkg})
-			local config_bestavail="${savedconfigs}${pkg_bestavail}"
+			config_bestavail=${savedconfigs}${pkg_bestavail}
 			# Pick the newest saved configuration, and check if it's more recent
 			# than the reference binary.
 			force_emerge=true
 			if [ -n "${pkg_bestavail}" -a -e "${config_bestavail}" ]; then
-				[ ${refbinary} -nt "${config_bestavail}" ] && force_emerge=false
+				[ ${refbin} -nt "${config_bestavail}" ] && force_emerge=false
 				adjconfig_${pn} "${config_bestavail}" >"${config_any}-tym"
 			elif [ -n "${pkg_bestinst}" -a -e "${config_bestinst}" ]; then
-				[ ${refbinary} -nt "${config_bestinst}" ] && force_emerge=false
+				[ ${refbin} -nt "${config_bestinst}" ] && force_emerge=false
 				adjconfig_${pn} "${config_bestinst}" >"${config_any}-tym"
 			elif [ -e "${config_any}" ]; then
-				[ ${refbinary} -nt "${config_any}" ] && force_emerge=false
+				[ ${refbin} -nt "${config_any}" ] && force_emerge=false
 				adjconfig_${pn} "${config_any}" >"${config_any}-tym"
 			else
-				# There's no saved configuration, so assume that we last emerged
-				# it and then deleted the temporary savedconfig, so we'll consider
-				# it now up-to-date, as far as ${force_emerge} is concerned.
+				# There's no saved configuration, so assume that we last emerged it
+				# and then deleted the temporary savedconfig, so we'll consider it
+				# now up-to-date, as far as ${force_emerge} is concerned.
 				force_emerge=false
 				if ${needs_emerge}; then
-					# Since there's no saved configuration available, but we do
-					# need to emerge the package, emerge it once to create a
-					# default saved configuration, with USE=-savedconfig.
+					# Since there's no saved configuration available, but we do need
+					# to emerge the package, emerge it once to create a default saved
+					# configuration, with USE=-savedconfig.
 					lUSE="${lUSE% savedconfig}"
 					rooted_emerge_raw_q -uNO ${pkg}
-					# Fix an issue in current savedconfig.eclass, where the saved
-					# configuration is placed in ${ROOT}/${PORTAGE_CONFIGROOT}/etc/
-					# instead of ${PORTAGE_CONFIGROOT}/etc/ .
-					[ -e "${config_bestavail}" ] ||
+					# Fix an issue in savedconfig.eclass: the saved configuration is
+					# placed in ${ROOT}/etc/portage/savedconfig instead of
+					# ${PORTAGE_CONFIGROOT}/etc/portage/savedconfig .
+					if [ ! -e "${config_bestavail}" ]; then
 						mv -f \
 							"${tym_root}etc/portage/savedconfig/${pkg_bestavail}" \
 							"${config_bestavail}"
+					fi
 					adjconfig_${pn} "${config_bestavail}" >"${config_any}-tym"
 					rm -f "${config_bestavail}"
 					# And now re-enable USE=savedconfig.
@@ -288,12 +296,11 @@ rooted_emerge() {
 			if ${needs_emerge} || ${force_emerge}; then
 				# Rename the adjusted configuration so that emerge will use it,
 				# but preserve a possibly existing same-name savedconfig.
-				[ -f "${config_bestavail}" ] &&
+				if [ -f "${config_bestavail}" ]; then
 					mv -f "${config_bestavail}" "${config_bestavail}-notym"
+				fi
 				mv "${config_any}-tym" "${config_bestavail}"
 			fi
-		else
-			force_emerge=false
 		fi
 
 		if ${needs_emerge} || ${force_emerge}; then
@@ -303,15 +310,16 @@ rooted_emerge() {
 			ret=0
 		fi
 
-		if [ -n "${refbinary}" ]; then
+		if [ -n "${refbin}" ]; then
 			if ${needs_emerge} || ${force_emerge}; then
 				# Delete the adjusted saved configuration, and restore the
 				# previous file, if any.
 				rm -f "${config_bestavail}"
-				[ -f "${config_bestavail}-notym" ] &&
+				if [ -f "${config_bestavail}-notym" ]; then
 					mv -f "${config_bestavail}-notym" "${config_bestavail}"
+				fi
 			fi
-			unset refbinary
+			unset refbin
 		fi
 
 		[ ${ret} -eq 0 ] || break
@@ -337,11 +345,12 @@ adjconfig_busybox() {
 			for (i in arrConfig) {
 				s = arrConfig[i]
 				bDisable = sub(/^-/, "", s)
-				# Assume bDisable == 0, for now.
+				# Assume bDisable == 0, for now: we want to find a "not set" entry
+				# and replace it with an "=y" entry.
 				sFind = "# CONFIG_" s " is not set"
 				sRepl = "CONFIG_" s "=y"
 				if (bDisable) {
-					# Swap sRepl and sFind.
+					# Swap sRepl and sFind: look for "=y", replace with "not set".
 					s = sFind
 					sFind = sRepl
 					sRepl = s
@@ -352,7 +361,7 @@ adjconfig_busybox() {
 			}
 		}
 		{
-			# This will toggle every option that is not how we want it.
+			# Toggle every option in arrToggle, printing the rest as-is.
 			if ($0 in arrToggle)
 				print arrToggle[$0]
 			else
@@ -360,8 +369,8 @@ adjconfig_busybox() {
 		}
 	' <"${1}"
 }
-refbinary_busybox=bin/busybox
-USE_busybox='make-symlinks'
+refbin_busybox=bin/busybox
+USE_busybox='make-symlinks math mdev'
 
 # Filters/enriches Dropbear's saved configuration file, making it lighter and
 # ensuring it suits our needs.
@@ -395,7 +404,7 @@ adjconfig_dropbear() {
 		!($1 == "#" && $2 == "define" && $3 in arrDelete)
 	' <"${1}"
 }
-refbinary_dropbear=usr/sbin/dropbeard
+refbin_dropbear=usr/sbin/dropbeard
 USE_dropbear='-minimal syslog zlib'
 EXTRA_ECONF_dropbear='
 	--disable-lastlog
@@ -454,12 +463,12 @@ rooted_emerge \
 eend ${?} || exit
 
 # Remove useless absolute symlink that would later confuse the binary
-# dependency resolver.
+# dependencies resolver.
 [ -L usr/bin/nano ] && rm usr/bin/nano
 
 
 
-# End of emerge phase. #######################################################
+# End of emerge phase. #########################################################
 
 
 
@@ -495,8 +504,8 @@ eend ${?} || exit
 
 
 ebegin 'Determining binaries not built into BusyBox'
-# Extract the names of any udev helpers required, and remove binaries built
-# into BB.
+# Extract the names of any udev helpers required, and remove binaries built into
+# BB.
 bins=$(
 	cd "${tym_root}lib/udev/rules.d"
 	# List all the symlinks to BusyBox.
@@ -584,8 +593,8 @@ while [ -n "${scandeps}" ]; do
 			}
 
 			function addwithsoname(sDir, sLib) {
-				# Add these backends, same version as glibc, and their SONAME
-				# links, found out with objdump.
+				# Add these backends, same version as glibc, and their SONAME links,
+				# found out with objdump.
 				print sDir sLib
 				sObjDump = ENVIRON["CROSS_COMPILE"] "objdump -x " sDir sLib
 				# Tiny awk sub-program here :)
@@ -629,8 +638,8 @@ while [ -n "${scandeps}" ]; do
 				sReadLink = "readlink -m \"" s "\""
 				sReadLink | getline s
 				close(sReadLink)
-				# If s was a symlink, skip it if its target has been added
-				# already; if it was not, this test will always be true.
+				# If s was a symlink, skip it if its target has been added already;
+				# if it was not, this test will always be true.
 				if (s in arrDeps)
 					next
 				arrScanDeps[s] = 1
@@ -660,25 +669,42 @@ eend ${?} || exit
 
 
 ebegin 'Adding binaries and their dependencies'
-# Copy each file to ${tym_work}, keeping its relative path.
-for src in ${bins} ${deps}; do
-	if [ "${src#${tym_root}}" != "${src}" ]; then
-		dst="${src#${tym_root}}"
-	elif [ "${src#${tym_parent}}" != "${src}" ]; then
-		dst="${src#${tym_parent}}"
-	else
-		eerror "Cannot find dependency '${src}'"
-		eend 1 || exit
-	fi
-	# Don't bother keeping separate bin, sbin and lib in /usr.
-	dst="${tym_work}${dst#usr/}"
-	cp -a "${src}" "${dst}" || eend ${?} || exit
-done
-# Make links to the BusyBox applets.
-(
-	cd "${tym_root}"
-	find -lname busybox -exec ln -s ../bin/busybox "${tym_work}{}" ";"
-)
+
+
+# Copies every binary or dependency to ${tym_work}, keeping its relative path.
+image_copy_bins_and_deps() {
+	local src dst
+	for src in ${bins} ${deps}; do
+		if [ "${src#${tym_root}}" != "${src}" ]; then
+			# Remove the ${tym_root} root.
+			dst="${src#${tym_root}}"
+		elif [ "${src#${tym_parent}}" != "${src}" ]; then
+			# Remove the ${tym_parent} root.
+			dst="${src#${tym_parent}}"
+		else
+			eerror "Cannot find dependency '${src}'"
+			return 1
+		fi
+		# Don't bother keeping separate bin, sbin and lib in /usr: remove "usr/" if
+		# present.
+		dst="${tym_work}${dst#usr/}"
+		cp -a "${src}" "${dst}" || return ${?}
+	done
+}
+
+
+# Makes links to the BusyBox applets.
+image_make_bb_links() {
+	(
+		cd "${tym_root}"
+		find -lname busybox -exec ln -s ../bin/busybox "${tym_work}{}" ";"
+	)
+}
+
+
+image_copy_bins_and_deps &&
+image_make_bb_links
+
 eend ${?} || exit
 
 
@@ -693,70 +719,81 @@ ebegin 'Creating/importing configuration files'
 
 ln -s ../proc/mounts etc/mtab
 
-echo 'root:x:0:0::/:/bin/sh' >etc/passwd
-echo 'root:x:0:' >etc/group
-# 'yrf:pass'
-echo 'root:$1$2yMecUvM$n6o/OjTWuHzxQftOBpGg//:15006:0:99999:7:::' >etc/shadow
-echo 'root:!::' >etc/gshadow
-chmod 0600 etc/shadow etc/gshadow
-
 if [ ${ELIBC} = glibc ]; then
 	cat >etc/nsswitch.conf <<-EOF
 		# Available backends are: compat, dns, files.
 
-		passwd:		compat
-		group:		compat
-		shadow:		compat
+		passwd:         compat
+		group:          compat
+		shadow:         compat
 
-		hosts:		dns files
-		networks:	files
-		ethers:		files
-		protocols:	files
-		rpc:		files
-		services:	files
+		hosts:          dns files
+		networks:       files
+		ethers:         files
+		protocols:      files
+		rpc:            files
+		services:       files
 	EOF
 fi
 
-if [ -e "${tym_parent}etc/nanorc" ]; then
-	cfgroot="${tym_parent}"
-elif [ -e /etc/nanorc ]; then
-	cfgroot=/
-else
-	unset cfgroot
-fi
-if [ -n "${cfgroot}" ]; then
-	# Filter nanorc, deleting lines that require disabled functionality. See
-	# the ${EXTRA_ECONF_nano} tweaks above.
-	awk '
-		BEGIN {
-			# From USE=-justify
-			arrUnavailOpts["brackets"] = 1
-			arrUnavailKeys["justify"] = 1
-			arrUnavailKeys["beginpara"] = 1
-			arrUnavailKeys["endpara"] = 1
-			arrUnavailKeys["fulljustify"] = 1
-			# From USE=-spell
-			arrUnavailOpts["speller"] = 1
-			# From --disable-extra
-			# <none>
-			# From --disable-browser
-			# <none>
-			# From --disable-mouse
-			arrUnavailOpts["mouse"] = 1
-			# From --disable-operatingdir
-			arrUnavailOpts["operatingdir"] = 1
-			# From --disable-tabcomp
-			# <none>
-			# From --disable-wrapping
-			arrUnavailOpts["brackets"] = 1
-			arrUnavailOpts["nowrap"] = 1
-		}
-		# Skip includes and unavailable set options and key bindings.
-		$1 != "include" &&
-		($1 != "set" || !($2 in arrUnavailOpts)) &&
-		($1 != "bind" || !($3 in arrUnavailKeys))
-	' <"${cfgroot}etc/nanorc" >etc/nanorc
-fi
+# Creates the basic users/groups in the files /etc/passwd, /etc/group and so on.
+config_create_users_and_groups() {
+	echo 'root:x:0:0::/:/bin/sh' >etc/passwd
+	echo 'root:x:0:' >etc/group
+	# 'yrf:pass'
+	echo 'root:$1$2yMecUvM$n6o/OjTWuHzxQftOBpGg//:15006:0:99999:7:::' >etc/shadow
+	echo 'root:!::' >etc/gshadow
+	chmod 0600 etc/shadow etc/gshadow
+}
+
+
+# Copies /etc/nanorc (if existing on the host) to the image being built,
+# disabling features that we took out of nano.
+config_copy_nanorc() {
+	local cfgroot=
+	if [ -e "${tym_parent}etc/nanorc" ]; then
+		cfgroot="${tym_parent}"
+	elif [ -e /etc/nanorc ]; then
+		cfgroot=/
+	fi
+	if [ -n "${cfgroot}" ]; then
+		# Filter nanorc, deleting lines that require disabled functionality. See
+		# the ${EXTRA_ECONF_nano} tweaks above.
+		awk '
+			BEGIN {
+				# From USE=-justify
+				arrUnavailOpts["brackets"] = 1
+				arrUnavailKeys["justify"] = 1
+				arrUnavailKeys["beginpara"] = 1
+				arrUnavailKeys["endpara"] = 1
+				arrUnavailKeys["fulljustify"] = 1
+				# From USE=-spell
+				arrUnavailOpts["speller"] = 1
+				# From --disable-extra
+				# <none>
+				# From --disable-browser
+				# <none>
+				# From --disable-mouse
+				arrUnavailOpts["mouse"] = 1
+				# From --disable-operatingdir
+				arrUnavailOpts["operatingdir"] = 1
+				# From --disable-tabcomp
+				# <none>
+				# From --disable-wrapping
+				arrUnavailOpts["brackets"] = 1
+				arrUnavailOpts["nowrap"] = 1
+			}
+			# Skip includes and unavailable set options and key bindings.
+			$1 != "include" &&
+			($1 != "set" || !($2 in arrUnavailOpts)) &&
+			($1 != "bind" || !($3 in arrUnavailKeys))
+		' <"${cfgroot}etc/nanorc" >etc/nanorc
+	fi
+}
+
+
+config_create_users_and_groups &&
+config_copy_nanorc
 
 eend ${?} || exit
 

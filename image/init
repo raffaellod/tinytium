@@ -1,31 +1,30 @@
 #!/bin/sh
 # -*- coding: utf-8; mode: sh; tab-width: 3 -*-
-#--------------------------------------------------------------------------- #
-# Tinytium																						  #
-# Copyright 2012 Raffaello D. Di Napoli												  #
-# -------------------------------------------------------------------------- #
-# This file is part of Tinytium.															  #
-#																									  #
-# Tinytium is free software: you can redistribute it and/or modify it under  #
-# the terms of the GNU General Public License as published by the Free		  #
-# Software Foundation, either version 3 of the License, or (at your option)  #
-# any later version.																			  #
-#																									  #
-# Tinytium is distributed in the hope that it will be useful, but WITHOUT	  #
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or		  #
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for	  #
-# more details.																				  #
-#																									  #
-# You should have received a copy of the GNU General Public License along	  #
-# with Tinytium. If not, see <http://www.gnu.org/licenses/>.					  #
-# -------------------------------------------------------------------------- #
-# The init program.                  _____ _              _   _				  #
-#                                   |_   _|_)____  _   __| |_(_)_   _ ____	  #
-#                                     | | | |  _ \| | | |   _| | | | |    \  #
-#                                     | | | | | \ | \_/ || |_| | \_| | | | | #
-#                                     |_| |_|_| |_|\__, |\___|_|\____|_|_|_| #
-#                                                  (___/							  #
-# -------------------------------------------------------------------------- #
+#-------------------------------------------------------------------------------
+# Tinytium
+# Copyright 2012-2013 Raffaello D. Di Napoli
+#-------------------------------------------------------------------------------
+# This file is part of Tinytium.
+#
+# Tinytium is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# Tinytium. If not, see <http://www.gnu.org/licenses/>.
+#-------------------------------------------------------------------------------
+# The init program (PID 1).              _____ _              _   _
+#                                       |_   _|_)____  _   __| |_(_)_   _ ____
+#                                         | | | |  _ \| | | |   _| | | | |    \
+#                                         | | | | | \ | \_/ || |_| | \_| | | | |
+#                                         |_| |_|_| |_|\__, |\___|_|\____|_|_|_|
+#                                                      (___/
+#-------------------------------------------------------------------------------
 
 # Supported kernel arguments (* denotes default):
 #   noresume
@@ -95,6 +94,7 @@ shell() {
 }
 
 shellonbreak() {
+	local break
 	if [ "${tym_break#${1},}" != "${tym_break}" ]; then
 		tym_break="${tym_break#${1},}"
 		break=true
@@ -109,6 +109,7 @@ shellonbreak() {
 
 
 # Basic initial setup.
+
 export PATH=/bin:/sbin
 mount -n -t proc /proc /proc
 mount -n -t sysfs /sys /sys
@@ -151,7 +152,7 @@ esac
 shellonbreak cmdline
 
 
-# Find out the root filesystem, and its mount options.
+# Find out the root filesystem.
 getargv root || panic 'no root argument provided'
 case "${root}" in
 (LABEL=?*)
@@ -211,27 +212,40 @@ udevadm trigger --action=add
 
 # And now, a few simple tasks to give udev some time.
 
+# Determines if the kernel supports SELinux.
+detect_selinux_support() {
+	# Implementation: check for its filesystem.
+	local flags fstype
+	while read -r flags fstype; do
+		if [ "${fstype}" = selinuxfs ]; then
+			selinuxsupp=true
+			return
+		fi
+	done </proc/filesystems
+	selinuxsupp=false
+}
 
-# Determine if the kernel supports SELinux by checking for its filesystem.
-selinuxsupp=false
-while read -r flags fstype; do
-	if [ "${fstype}" = selinuxfs ]; then
-		selinuxsupp=true
-		break
-	fi
-done </proc/filesystems
+detect_selinux_support
 
-# Only pass init a few well-known arguments.
-initargs=
-set -- ${cmdline}
-shift
-for s; do
-	case ${s} in
-	([0-9Ss]|auto|emergency|single)
-		initargs="${initargs} ${s}"
-		;;
-	esac
-done
+
+# Generates the command line for /sbin/init by filtering the one for the kernel.
+cmdline_get_init_args() {
+	local arg
+	set -- ${cmdline}
+	shift
+	initargs=
+	for arg; do
+		case ${arg} in
+		# Only allow a few well-known arguments.
+		([0-9Ss]|auto|emergency|single)
+			initargs="${initargs} ${arg}"
+			;;
+		esac
+	done
+	echo "${initargs}"
+}
+
+cmdline_get_init_args
 
 
 # End simple tasks. Now just plain busy waiting.
@@ -253,7 +267,7 @@ udev_wait_finished() {
 		fi
 		[ -e /dev/resume ] && udev_wait_resume=false
 	fi
-	# If they both showed up, signal that the wait is over.
+	# Report whether all waits are over.
 	! ${udev_wait_root} && ! ${udev_wait_resume}
 }
 
@@ -331,8 +345,9 @@ info "mounting ${root} (type: ${rootfstype}, options: ${allrflags})"
 if ! mount -n -t ${rootfstype} -o ${allrflags} ${root} /newroot; then
 	error "unable to mount ${root} as root" \
 		'You have to mount /newroot manually.'
-	# Check which device was mounted as /newroot, so we can remount it later.
-	# Also make sure it's symlinked.
+	# Check which device was mounted by the user as /newroot, so we can remount
+	# it later.
+	root=
 	while read -r dev mp rest; do
 		if [ ${mp} = /newroot ]; then
 			root=${dev}
@@ -340,37 +355,43 @@ if ! mount -n -t ${rootfstype} -o ${allrflags} ${root} /newroot; then
 			break
 		fi
 	done </proc/mounts
-	# If /newroot was not mounted, there's no point in going ahead.
-	[ -e ${root} ] || panic 'no root mounted in /newroot'
+	# If ${root} is still non-existent, there's no point in going ahead.
+	[ -e "${root}" ] || panic 'no root mounted in /newroot'
 fi
 
 # If no root mount options were specified and /newroot/etc/fstab contains
 # special mount options for it, remount the root with the options in fstab.
 if [ -z "${rootflags}" -a -f /newroot/etc/fstab ]; then
-	while read -r dev mp rootfstype opts rest; do
-		# Skip comments, and only consider /.
-		if [ "${dev%%#*}" = "${dev}" -a "${mp}" = / ]; then
-			# Add leading and trailing commas for later.
-			rootflags=,${opts},
-			break
+	# Remounts / with the options in /etc/fstab contained in it.
+	remount_root_per_fstab() {
+		local dev mp rootfstype opts rest
+		while read -r dev mp rootfstype opts rest; do
+			# Skip comments, and only consider /.
+			if [ "${dev%%#*}" = "${dev}" -a "${mp}" = / ]; then
+				# Add leading and trailing commas for later.
+				rootflags=,${opts},
+				break
+			fi
+		done </newroot/etc/fstab
+		# Strip ro, rw and defaults.
+		strsubst rootflags ',r[ow],' ','
+		strsubst rootflags ',defaults,' ','
+		# Remove the added leading and trailing commas.
+		rootflags=${rootflags#,}
+		rootflags=${rootflags%,}
+		# If there are still any options left, use them.
+		if [ -n "${rootflags}" ]; then
+			allrflags=${baserootflags},${rootflags}
+			info "remounting ${root} (type: ${rootfstype}, options: ${allrflags})"
+			umount /newroot
+			if ! mount -n -t ${rootfstype} -o "${allrflags}" "${root}" /newroot; then
+				error "unable to remount ${root} as root" \
+					'You will have to remount it manually.'
+			fi
 		fi
-	done </newroot/etc/fstab
-	# Strip ro, rw and defaults.
-	strsubst rootflags ',r[ow],' ','
-	strsubst rootflags ',defaults,' ','
-	# Remove the added leading and trailing commas.
-	rootflags=${rootflags#,}
-	rootflags=${rootflags%,}
-	# If there's still any options left, use them.
-	if [ -n "${rootflags}" ]; then
-		allrflags=${baserflags},${rootflags}
-		info "remounting ${root} (type: ${rootfstype}, options: ${allrflags})"
-		umount /newroot
-		if ! mount -n -t ${rootfstype} -o ${allrflags} ${root} /newroot; then
-			error "unable to remount ${root} as root" \
-				'You will have to remount it manually.'
-		fi
-	fi
+	}
+
+	remount_root_per_fstab
 fi
 
 
