@@ -18,13 +18,10 @@
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-# Image generation script for Tinytium.  _____ _              _   _
-#                                       |_   _|_)____  _   __| |_(_)_   _ ____
-# No assumptions are made on what/who     | | | |  _ \| | | |   _| | | | |    \
-# invoked this program; ${PWD} will be    | | | | | \ | \_/ || |_| | \_| | | | |
-# used as scratchpad directory.           |_| |_|_| |_|\__, |\___|_|\____|_|_|_|
-#                                                      (___/
-#-------------------------------------------------------------------------------
+#
+# Image generation script for Tinytium. No assumptions are made on what/who
+# invoked this program; ${PWD} will be used as scratchpad directory.
+
 
 # Gathered from the various scripts in image/ and its subfolders.
 bins_core_bb='
@@ -337,6 +334,7 @@ rooted_emerge() {
 		[ -n "$(rooted_emerge_raw -pquNO ${pkg})" ] &&
 			needs_emerge=true || needs_emerge=false
 		lFEATURES=
+einfo "Package ${pkg} to be emerged? ${needs_emerge}"
 
 		# Check if there is a savedconfig that can be newer than the reference
 		# binary, in case of which we'll need to re-emerge even if no update is
@@ -390,6 +388,7 @@ rooted_emerge() {
 					lUSE="${lUSE} savedconfig"
 				fi
 			fi
+einfo "Package ${pkg} to be re-emerged? ${force_emerge}"
 			if ${needs_emerge} || ${force_emerge}; then
 				# Rename the adjusted configuration so that emerge will use it, but
 				# preserve a possibly existing same-name savedconfig.

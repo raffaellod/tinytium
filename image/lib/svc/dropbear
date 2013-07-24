@@ -17,13 +17,9 @@
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-# Service script for dropbear, an SSH    _____ _              _   _
-# server.                               |_   _|_)____  _   __| |_(_)_   _ ____
-#                                         | | | |  _ \| | | |   _| | | | |    \
-#                                         | | | | | \ | \_/ || |_| | \_| | | | |
-#                                         |_| |_|_| |_|\__, |\___|_|\____|_|_|_|
-#                                                      (___/							 
-#-------------------------------------------------------------------------------
+#
+# Service script for dropbear, an SSH server.
+
 
 SVC_DESC='Secure shell (SSH) server'
 SVC_NEEDS='net syslogd'

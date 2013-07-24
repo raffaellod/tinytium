@@ -17,13 +17,10 @@
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-# Basic login script.                    _____ _              _   _
-#                                       |_   _|_)____  _   __| |_(_)_   _ ____
-# Sets a simple prompt line, and          | | | |  _ \| | | |   _| | | | |    \
-# activates colors if supported.          | | | | | \ | \_/ || |_| | \_| | | | |
-#                                         |_| |_|_| |_|\__, |\___|_|\____|_|_|_|
-#                                                      (___/
-#-------------------------------------------------------------------------------
+#
+# Basic login script. Sets a simple prompt line, and activates colors if
+# supported.
+
 
 export PATH=/bin:/sbin
 export PS1='tym \W # '
