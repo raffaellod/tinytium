@@ -1,0 +1,45 @@
+-*- coding: utf-8; tab-width: 8 -*-
+--------------------------------------------------------------------------------
+Tinytium
+Copyright 2012-2013 Raffaello D. Di Napoli
+--------------------------------------------------------------------------------
+This file is part of Tinytium.
+
+Tinytium is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+Tinytium. If not, see <http://www.gnu.org/licenses/>.
+--------------------------------------------------------------------------------
+
+Introduction
+------------
+
+Tinytium is an initramfs generator based on Gentoo’s Portage. It features a
+small set of custom utilities, while relying on BusyBox for most of its
+features, which are:
+
+•  Command-line-configurable recovery mode, which allows either local login or
+   remote (SSH) access. When recovery mode is entered, a minimalist init system
+   is able to set up a network connection (using DHCP if configured to do so)
+   and starts an SSH daemon; syslogd is also available;
+
+•  Support for resuming an hibernated system, automatically detecting and
+   loading an hibernated image;
+
+•  Support for UUID= and LABEL= methods for specifying partitions/volumes.
+
+
+
+Name
+----
+
+Tinytium is a portmanteau of “tiny” and “initium” (Latin for “beginning”),
+respectively its goal and its purpose (as in “beginning of the boot process”).
+
