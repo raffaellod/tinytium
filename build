@@ -334,7 +334,6 @@ rooted_emerge() {
 		[ -n "$(rooted_emerge_raw -pquNO ${pkg})" ] &&
 			needs_emerge=true || needs_emerge=false
 		lFEATURES=
-einfo "Package ${pkg} to be emerged? ${needs_emerge}"
 
 		# Check if there is a savedconfig that can be newer than the reference
 		# binary, in case of which we'll need to re-emerge even if no update is
@@ -388,7 +387,6 @@ einfo "Package ${pkg} to be emerged? ${needs_emerge}"
 					lUSE="${lUSE} savedconfig"
 				fi
 			fi
-einfo "Package ${pkg} to be re-emerged? ${force_emerge}"
 			if ${needs_emerge} || ${force_emerge}; then
 				# Rename the adjusted configuration so that emerge will use it, but
 				# preserve a possibly existing same-name savedconfig.
