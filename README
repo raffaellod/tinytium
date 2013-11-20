@@ -215,6 +215,23 @@ However, if anything goes wrong during any of the operations that are required
 to make the root file system available, Tinytium’s /init program will break into
 the configured rescue shell (see § 5.1. Rescue shell).
 
+Here’s a break-down of the execution of Tinytium’s /init program:
+
+1. Mount the kernel-maintained devtmpfs, then start BusyBox’s mdev to process
+   all hot- and cold-plugs. This is done in order to make available both the
+   root file system and a possible hibernation image; Tinytium relies on
+   kernel-gen to add all necessary modules into the initramfs.
+
+2. If a hibernation image is detected, or the specified one (see § 4.2.
+   Configuring the Tinytium-generated initramfs) becomes available, Tinytium
+   will attempt to resume the system from hibernation.
+
+3. When the root file system becomes available, Tinytium will mount it once, to
+   retrieve the fstab(5) file and immediately remount it with the mount flags
+   therein specified.
+
+4. Switch to executing the real init program.
+
 
 5.1. Rescue shell
 -----------------
