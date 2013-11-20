@@ -18,8 +18,8 @@ You should have received a copy of the GNU General Public License along with
 Tinytium. If not, see <http://www.gnu.org/licenses/>.
 --------------------------------------------------------------------------------
 
-Introduction
-------------
+1. Introduction
+---------------
 
 Tinytium is an initramfs generator based on Gentoo’s Portage. It features a
 small set of custom utilities, while relying on BusyBox for most of its
@@ -37,9 +37,35 @@ features, which are:
 
 
 
-Name
-----
+1.1. Name
+---------
 
 Tinytium is a portmanteau of “tiny” and “initium” (Latin for “beginning”),
 respectively its goal and its purpose (as in “beginning of the boot process”).
+
+
+2. Usage
+--------
+
+Tinytium is to be launched by executing the /build program; this will populate
+the folder from which it’s executed with the generated contents for the
+initramfs.
+
+The build program is designed to be launched by kernel-gen (part of
+kernel-tools), and it expects these environment variables to be set:
+
+   CROSS_COMPILE
+      Cross-compiling toolchain prefix.
+   PORTAGE_ARCH
+      Target architecture, using Portage’s naming convention.
+
+When executed, Tinytium customizes and builds every necessary package, using
+Portage’s standard emerge program; the packages thus built are kept in a cache,
+located in /var/cache, so that regenerating the initramfs after rebuilding a
+kernel won’t also cause all the packages to be rebuilt.
+
+The easiest way to ensure your initramfs is rebuilt whenever you recompile your
+kernel is to symlink the Tinyium source folder from /usr/src/initramfs. Multiple
+kernel versions can be built using the same Tinytium installation; this is
+achieved by keeping separate caches.
 
