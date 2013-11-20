@@ -18,10 +18,13 @@
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-#
+
 # Image generation script for Tinytium. No assumptions are made on what/who
 # invoked this program; ${PWD} will be used as scratchpad directory.
 
+
+# Source Gentoo initscript helpers.
+. /etc/init.d/functions.sh
 
 # Gathered from the various scripts in image/ and its subfolders.
 bins_core_bb='
