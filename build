@@ -1,9 +1,9 @@
 #!/bin/sh
-# -*- coding: utf-8; mode: sh; tab-width: 3 -*-
-#-------------------------------------------------------------------------------
-# Tinytium
-# Copyright 2012-2013 Raffaello D. Di Napoli
-#-------------------------------------------------------------------------------
+# -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
+#
+# Copyright 2012, 2013
+# Raffaello D. Di Napoli
+#
 # This file is part of Tinytium.
 #
 # Tinytium is free software: you can redistribute it and/or modify it under the
@@ -28,223 +28,223 @@
 
 # Gathered from the various scripts in image/ and its subfolders.
 bins_core_bb='
-	awk
-	blkid
-	chvt cttyhack
-	dd deallocvt
-	echo
-	false fgconsole
-	ifconfig
-	kill klogd
-	ln logger logread
-	mdev mkdir modprobe mount mv
-	pidof
-	rm route
-	sed setsid sleep stat switch_root syslogd
-	test true
-	udhcpc umount
+   awk
+   blkid
+   chvt cttyhack
+   dd deallocvt
+   echo
+   false fgconsole
+   ifconfig
+   kill klogd
+   ln logger logread
+   mdev mkdir modprobe mount mv
+   pidof
+   rm route
+   sed setsid sleep stat switch_root syslogd
+   test true
+   udhcpc umount
 '
 # Same as above, but not provided by BB (i.e. no config option for them), or not
 # fully compatible in BB's implementation.
 bins_core_nobb='
-	dropbear dropbearconvert dropbearkey
-	sh
-	tput
+   dropbear dropbearconvert dropbearkey
+   sh
+   tput
 '
 # Also gathered from the files mentioned above. Mostly features necessary to get
 # BB applets to behave as expected; for programs excluded due to compatibility
 # issues, see the comments in the files themselves (mainly /init).
 busybox_config='
-	ASH
-	# Job control
-	ASH_JOB_CONTROL
-	# Choose which shell is aliased to bash name = ash
-	-BASH_IS_ASH
-	# Choose which shell is aliased to bash name = hush
-	-BASH_IS_HUSH
-	# Choose which shell is aliased to bash name = none
-	BASH_IS_NONE
-	# Print filesystem type
-	FEATURE_BLKID_TYPE
-	# Fancy shell prompts
-	FEATURE_EDITING_FANCY_PROMPT
-	# History saving
-	-FEATURE_EDITING_SAVEHISTORY
-	# Enable echo options (-n and -e)
-	FEATURE_FANCY_ECHO
-	# Enable fractional arguments
-	FEATURE_FLOAT_SLEEP
-	# Enable status reporting output (+7k)
-	FEATURE_IFCONFIG_STATUS
-	# Support running init from within an initrd (not initramfs)
-	-FEATURE_INITRD
-	# Support --install [-s] to install applet links at runtime
-	-FEATURE_INSTALLER
-	# Circular buffer size in Kbytes (minimum 4KB)
-	FEATURE_IPC_SYSLOG
-	# Double buffering
-	-FEATURE_LOGREAD_REDUCED_LOCKING
-	# Support /etc/mdev.conf
-	FEATURE_MDEV_CONF
-	# Support command execution at device addition/removal
-	FEATURE_MDEV_EXEC
-	# Support loading of firmwares
-	FEATURE_MDEV_LOAD_FIRMWARE
-	# Support subdirs/symlinks
-	FEATURE_MDEV_RENAME
-	# Support regular expressions substitutions when renaming device
-	FEATURE_MDEV_RENAME_REGEXP
-	# Blacklist support
-	FEATURE_MODPROBE_BLACKLIST
-	# Support for module.aliases file
-	FEATURE_MODUTILS_ALIAS
-	# Support for module.symbols file
-	FEATURE_MODUTILS_SYMBOLS
-	# Support option -f
-	FEATURE_MOUNT_FAKE
-	# Support lots of -o flags in mount
-	FEATURE_MOUNT_FLAGS
-	# Support /etc/fstab and -a
-	FEATURE_MOUNT_FSTAB
-	# Support mount helpers
-	FEATURE_MOUNT_HELPERS
-	# Support specifying devices by label or UUID
-	FEATURE_MOUNT_LABEL
-	# Support loopback mounts
-	FEATURE_MOUNT_LOOP
-	# Create new loopback devices if needed
-	FEATURE_MOUNT_LOOP_CREATE
-	# Support option -v
-	FEATURE_MOUNT_VERBOSE
-	# Support for the old /etc/mtab file
-	-FEATURE_MTAB_SUPPORT
-	# Remote Log support
-	-FEATURE_REMOTE_LOG
-	# Rotate message files
-	-FEATURE_ROTATE_LOGFILE
-	# Hide message on interactive shell startup
-	FEATURE_SH_EXTRA_QUIET
-	# Choose which shell is aliased to sh name = ash
-	FEATURE_SH_IS_ASH
-	# Choose which shell is aliased to sh name = hush
-	-FEATURE_SH_IS_HUSH
-	# Choose which shell is aliased to sh name = none
-	-FEATURE_SH_IS_NONE
-	# Run nofork applets directly
-	FEATURE_SH_NOFORK
-	# Enable custom formats (-c)
-	FEATURE_STAT_FORMAT
-	# Support option -a
-	FEATURE_UMOUNT_ALL
-	# Support -D (drop dups) option
-	-FEATURE_SYSLOGD_DUP
-	# Username completion
-	-FEATURE_USERNAME_COMPLETION
-	# Ext filesystem
-	FEATURE_VOLUMEID_EXT
-	# btrfs filesystem
-	FEATURE_VOLUMEID_BTRFS
-	# Reiser filesystem
-	FEATURE_VOLUMEID_REISERFS
-	# fat filesystem
-	FEATURE_VOLUMEID_FAT
-	# hfs filesystem
-	FEATURE_VOLUMEID_HFS
-	# jfs filesystem
-	FEATURE_VOLUMEID_JFS
-	# xfs filesystem
-	FEATURE_VOLUMEID_XFS
-	# ntfs filesystem
-	FEATURE_VOLUMEID_NTFS
-	# iso9660 filesystem
-	FEATURE_VOLUMEID_ISO9660
-	# udf filesystem
-	FEATURE_VOLUMEID_UDF
-	# luks filesystem
-	FEATURE_VOLUMEID_LUKS
-	# linux swap filesystem
-	FEATURE_VOLUMEID_LINUXSWAP
-	# cramfs filesystem
-	FEATURE_VOLUMEID_CRAMFS
-	# romfs filesystem
-	FEATURE_VOLUMEID_ROMFS
-	# sysv filesystem
-	FEATURE_VOLUMEID_SYSV
-	# ocfs2 filesystem
-	FEATURE_VOLUMEID_OCFS2
-	# linuxraid
-	FEATURE_VOLUMEID_LINUXRAID
-	# Not really necessary, but it breaks if omitted.
-	GINIT
-	# hush
-	-HUSH
-	# What kind of applet links to install = as hard-links
-	-INSTALL_APPLET_HARDLINKS
-	# What kind of applet links to install = not installed
-	-INSTALL_APPLET_DONT
-	# What kind of applet links to install = as script wrappers
-	-INSTALL_APPLET_SCRIPT_WRAPPERS
-	# What kind of applet links to install = as soft-links
-	INSTALL_APPLET_SYMLINKS
-	# Do not use /usr
-	INSTALL_NO_USR
-	-MKFS_EXT2
-	-MKFS_REISER
-	-MKFS_VFAT
-	# Simplified modutils
-	-MODPROBE_SMALL
-	# Support for PAM (Pluggable Authentication Modules)
-	-PAM
-	# pivot_root
-	-PIVOT_ROOT
-	# POSIX math support
-	SH_MATH_SUPPORT
-	-START_STOP_DAEMON
-	# Use internal password and group functions rather than system functions
-	-USE_BB_PWD_GRP
-	# volumeid
-	VOLUMEID
+   ASH
+   # Job control
+   ASH_JOB_CONTROL
+   # Choose which shell is aliased to bash name = ash
+   -BASH_IS_ASH
+   # Choose which shell is aliased to bash name = hush
+   -BASH_IS_HUSH
+   # Choose which shell is aliased to bash name = none
+   BASH_IS_NONE
+   # Print filesystem type
+   FEATURE_BLKID_TYPE
+   # Fancy shell prompts
+   FEATURE_EDITING_FANCY_PROMPT
+   # History saving
+   -FEATURE_EDITING_SAVEHISTORY
+   # Enable echo options (-n and -e)
+   FEATURE_FANCY_ECHO
+   # Enable fractional arguments
+   FEATURE_FLOAT_SLEEP
+   # Enable status reporting output (+7k)
+   FEATURE_IFCONFIG_STATUS
+   # Support running init from within an initrd (not initramfs)
+   -FEATURE_INITRD
+   # Support --install [-s] to install applet links at runtime
+   -FEATURE_INSTALLER
+   # Circular buffer size in Kbytes (minimum 4KB)
+   FEATURE_IPC_SYSLOG
+   # Double buffering
+   -FEATURE_LOGREAD_REDUCED_LOCKING
+   # Support /etc/mdev.conf
+   FEATURE_MDEV_CONF
+   # Support command execution at device addition/removal
+   FEATURE_MDEV_EXEC
+   # Support loading of firmwares
+   FEATURE_MDEV_LOAD_FIRMWARE
+   # Support subdirs/symlinks
+   FEATURE_MDEV_RENAME
+   # Support regular expressions substitutions when renaming device
+   FEATURE_MDEV_RENAME_REGEXP
+   # Blacklist support
+   FEATURE_MODPROBE_BLACKLIST
+   # Support for module.aliases file
+   FEATURE_MODUTILS_ALIAS
+   # Support for module.symbols file
+   FEATURE_MODUTILS_SYMBOLS
+   # Support option -f
+   FEATURE_MOUNT_FAKE
+   # Support lots of -o flags in mount
+   FEATURE_MOUNT_FLAGS
+   # Support /etc/fstab and -a
+   FEATURE_MOUNT_FSTAB
+   # Support mount helpers
+   FEATURE_MOUNT_HELPERS
+   # Support specifying devices by label or UUID
+   FEATURE_MOUNT_LABEL
+   # Support loopback mounts
+   FEATURE_MOUNT_LOOP
+   # Create new loopback devices if needed
+   FEATURE_MOUNT_LOOP_CREATE
+   # Support option -v
+   FEATURE_MOUNT_VERBOSE
+   # Support for the old /etc/mtab file
+   -FEATURE_MTAB_SUPPORT
+   # Remote Log support
+   -FEATURE_REMOTE_LOG
+   # Rotate message files
+   -FEATURE_ROTATE_LOGFILE
+   # Hide message on interactive shell startup
+   FEATURE_SH_EXTRA_QUIET
+   # Choose which shell is aliased to sh name = ash
+   FEATURE_SH_IS_ASH
+   # Choose which shell is aliased to sh name = hush
+   -FEATURE_SH_IS_HUSH
+   # Choose which shell is aliased to sh name = none
+   -FEATURE_SH_IS_NONE
+   # Run nofork applets directly
+   FEATURE_SH_NOFORK
+   # Enable custom formats (-c)
+   FEATURE_STAT_FORMAT
+   # Support option -a
+   FEATURE_UMOUNT_ALL
+   # Support -D (drop dups) option
+   -FEATURE_SYSLOGD_DUP
+   # Username completion
+   -FEATURE_USERNAME_COMPLETION
+   # Ext filesystem
+   FEATURE_VOLUMEID_EXT
+   # btrfs filesystem
+   FEATURE_VOLUMEID_BTRFS
+   # Reiser filesystem
+   FEATURE_VOLUMEID_REISERFS
+   # fat filesystem
+   FEATURE_VOLUMEID_FAT
+   # hfs filesystem
+   FEATURE_VOLUMEID_HFS
+   # jfs filesystem
+   FEATURE_VOLUMEID_JFS
+   # xfs filesystem
+   FEATURE_VOLUMEID_XFS
+   # ntfs filesystem
+   FEATURE_VOLUMEID_NTFS
+   # iso9660 filesystem
+   FEATURE_VOLUMEID_ISO9660
+   # udf filesystem
+   FEATURE_VOLUMEID_UDF
+   # luks filesystem
+   FEATURE_VOLUMEID_LUKS
+   # linux swap filesystem
+   FEATURE_VOLUMEID_LINUXSWAP
+   # cramfs filesystem
+   FEATURE_VOLUMEID_CRAMFS
+   # romfs filesystem
+   FEATURE_VOLUMEID_ROMFS
+   # sysv filesystem
+   FEATURE_VOLUMEID_SYSV
+   # ocfs2 filesystem
+   FEATURE_VOLUMEID_OCFS2
+   # linuxraid
+   FEATURE_VOLUMEID_LINUXRAID
+   # Not really necessary, but it breaks if omitted.
+   GINIT
+   # hush
+   -HUSH
+   # What kind of applet links to install = as hard-links
+   -INSTALL_APPLET_HARDLINKS
+   # What kind of applet links to install = not installed
+   -INSTALL_APPLET_DONT
+   # What kind of applet links to install = as script wrappers
+   -INSTALL_APPLET_SCRIPT_WRAPPERS
+   # What kind of applet links to install = as soft-links
+   INSTALL_APPLET_SYMLINKS
+   # Do not use /usr
+   INSTALL_NO_USR
+   -MKFS_EXT2
+   -MKFS_REISER
+   -MKFS_VFAT
+   # Simplified modutils
+   -MODPROBE_SMALL
+   # Support for PAM (Pluggable Authentication Modules)
+   -PAM
+   # pivot_root
+   -PIVOT_ROOT
+   # POSIX math support
+   SH_MATH_SUPPORT
+   -START_STOP_DAEMON
+   # Use internal password and group functions rather than system functions
+   -USE_BB_PWD_GRP
+   # volumeid
+   VOLUMEID
 '
 # Useful programs to fix disks/filesystems.
 bins_disk_extfs='
-	badblocks
-	chattr
-	debugfs dumpe2fs
-	e2freefrag e2fsck e2image e2label e2undo
-	filefrag fsck.ext2 fsck.ext3 fsck.ext4 fsck.ext4dev
-	logsave lsattr
-	mke2fs mkfs.ext2 mkfs.ext3 mkfs.ext4 mkfs.ext4dev mklost+found
-	resize2fs
-	tune2fs
+   badblocks
+   chattr
+   debugfs dumpe2fs
+   e2freefrag e2fsck e2image e2label e2undo
+   filefrag fsck.ext2 fsck.ext3 fsck.ext4 fsck.ext4dev
+   logsave lsattr
+   mke2fs mkfs.ext2 mkfs.ext3 mkfs.ext4 mkfs.ext4dev mklost+found
+   resize2fs
+   tune2fs
 '
 bins_disk="
-	${bins_disk_extfs}
+   ${bins_disk_extfs}
 "
 # Core commands + BusyBox + other useful stuff.
 bins="
-	${bins_core_bb}
-	${bins_core_nobb}
-	busybox
-	nano
-	${bins_disk}
+   ${bins_core_bb}
+   ${bins_core_nobb}
+   busybox
+   nano
+   ${bins_disk}
 "
 
 
 # Bulk-exports Portage environment variables into our actual environment, mostly
 # to feed them back to Portage after we switch to our make.conf .
 portage_export() {
-	local vars
-	vars=$(
-		portageq envvar "${@}" |
-		awk -v sVars="${*}" '
-			{
-				match(sVars, /^[^ ]*/)
-				print "export " substr(sVars, 1, RLENGTH) "='\''" $0 "'\''"
-				sVars = substr(sVars, RLENGTH + 2)
-			}
-		'
-	)
-	eval "${vars}"
+   local vars
+   vars=$(
+      portageq envvar "${@}" |
+      awk -v sVars="${*}" '
+         {
+            match(sVars, /^[^ ]*/)
+            print "export " substr(sVars, 1, RLENGTH) "='\''" $0 "'\''"
+            sVars = substr(sVars, RLENGTH + 2)
+         }
+      '
+   )
+   eval "${vars}"
 }
 
 
@@ -278,11 +278,11 @@ savedconfigs="${tym_parent}etc/portage/savedconfig/"
 # (Re)build packages needed by Tinytium, each with the appropriate options.
 ebegin 'Building/updating necessary packages'
 if [ ! -d "${tym_root}" ]; then
-	mkdir -p "${tym_root}"
-	if [ ${ARCH} = x86_64 ]; then
-		mkdir "${tym_root}lib"
-		ln -s lib "${tym_root}lib64"
-	fi
+   mkdir -p "${tym_root}"
+   if [ ${ARCH} = x86_64 ]; then
+      mkdir "${tym_root}lib"
+      ln -s lib "${tym_root}lib64"
+   fi
 fi
 cd "${tym_root}"
 
@@ -290,21 +290,21 @@ cd "${tym_root}"
 # allowing for USE and EXTRA_ECONF customizations. See
 # <http://www.gentoo.org/proj/en/base/embedded/handbook/>.
 rooted_emerge_raw() {
-	# The variable ARCH that's in the environment right now is for kmake, not
-	# Portage; the correct variable is PORTAGE_ARCH.
-	env ARCH=${PORTAGE_ARCH} \
-		ROOT="${tym_root}" \
-		PORTAGE_CONFIGROOT="${tym_parent}" \
-		FEATURES="-buildpkg -news nodoc noinfo noman ${lFEATURES}" \
-		USE="${lUSE}" \
-		EXTRA_ECONF="${lEXTRA_ECONF}" \
-		"${CROSS_COMPILE}emerge" "${@}"
+   # The variable ARCH that's in the environment right now is for kmake, not
+   # Portage; the correct variable is PORTAGE_ARCH.
+   env ARCH=${PORTAGE_ARCH} \
+      ROOT="${tym_root}" \
+      PORTAGE_CONFIGROOT="${tym_parent}" \
+      FEATURES="-buildpkg -news nodoc noinfo noman ${lFEATURES}" \
+      USE="${lUSE}" \
+      EXTRA_ECONF="${lEXTRA_ECONF}" \
+      "${CROSS_COMPILE}emerge" "${@}"
 }
 
 # Quiet version of rooted_emerge_raw.
 rooted_emerge_raw_q() {
-	rooted_emerge_raw -q --quiet-build "${@}" >/dev/null
-#	rooted_emerge_raw -v "${@}"
+   rooted_emerge_raw -q --quiet-build "${@}" >/dev/null
+#  rooted_emerge_raw -v "${@}"
 }
 
 # Re-emerges each specified package, if necessary. If a variable named
@@ -314,167 +314,167 @@ rooted_emerge_raw_q() {
 # be re-emerged. In case of packages using savedconfig, the configuration is
 # temporarily adjusted for Tinytium's purposes.
 rooted_emerge() {
-	local pn ret var lFEATURES force_emerge needs_emerge refbin
-	local config_any pkg_bestavail pkg_bestinst config_bestavail config_bestinst
+   local pn ret var lFEATURES force_emerge needs_emerge refbin
+   local config_any pkg_bestavail pkg_bestinst config_bestavail config_bestinst
 
-	for pkg; do
-		pn=$(echo ${pkg#*/} | sed -e 's/-/_/g')
+   for pkg; do
+      pn=$(echo ${pkg#*/} | sed -e 's/-/_/g')
 
-		# Extract package-specific emerge environment variables.
-		for var in USE EXTRA_ECONF; do
-			eval l${var}=\"\${${var}} \${${var}_${pn}}\"
-		done
-		# This is NOT local.
-		lUSE="-* ipv6 minimal unicode ${lUSE}"
+      # Extract package-specific emerge environment variables.
+      for var in USE EXTRA_ECONF; do
+         eval l${var}=\"\${${var}} \${${var}_${pn}}\"
+      done
+      # This is NOT local.
+      lUSE="-* ipv6 minimal unicode ${lUSE}"
 
-		# Check if this is a savedconfig ebuild, and enable USE=savedconfig if
-		# appropriate.
-		eval refbin=\"\${refbin_${pn}}\"
-		[ -n ${refbin} ] && lUSE="${lUSE} savedconfig"
+      # Check if this is a savedconfig ebuild, and enable USE=savedconfig if
+      # appropriate.
+      eval refbin=\"\${refbin_${pn}}\"
+      [ -n ${refbin} ] && lUSE="${lUSE} savedconfig"
 
-		# Find out if the cached installed version needs to be updated.
-		lFEATURES=notitles
-		[ -n "$(rooted_emerge_raw -pquNO ${pkg})" ] &&
-			needs_emerge=true || needs_emerge=false
-		lFEATURES=
+      # Find out if the cached installed version needs to be updated.
+      lFEATURES=notitles
+      [ -n "$(rooted_emerge_raw -pquNO ${pkg})" ] &&
+         needs_emerge=true || needs_emerge=false
+      lFEATURES=
 
-		# Check if there is a savedconfig that can be newer than the reference
-		# binary, in case of which we'll need to re-emerge even if no update is
-		# needed.
-		if [ -z "${refbin}" ]; then
-			force_emerge=false
-		else
-			config_any=${savedconfigs}${pkg}
-			# Ensure that the category's savedconfig directory exists.
-			mkdir -p "${config_any%/*}"
-			# Find out which version is currently installed, if any.
-			pkg_bestinst=$(portageq best_version "${tym_parent}" ${pkg})
-			config_bestinst=${savedconfigs}${pkg_bestinst}
-			# Find out which version would be installed.
-			pkg_bestavail=$(portageq best_visible "${tym_parent}" ${pkg})
-			config_bestavail=${savedconfigs}${pkg_bestavail}
-			# Pick the newest saved configuration, and check if it's more recent
-			# than the reference binary.
-			force_emerge=true
-			if [ -n "${pkg_bestavail}" -a -e "${config_bestavail}" ]; then
-				[ ${refbin} -nt "${config_bestavail}" ] && force_emerge=false
-				adjconfig_${pn} "${config_bestavail}" >"${config_any}-tym"
-			elif [ -n "${pkg_bestinst}" -a -e "${config_bestinst}" ]; then
-				[ ${refbin} -nt "${config_bestinst}" ] && force_emerge=false
-				adjconfig_${pn} "${config_bestinst}" >"${config_any}-tym"
-			elif [ -e "${config_any}" ]; then
-				[ ${refbin} -nt "${config_any}" ] && force_emerge=false
-				adjconfig_${pn} "${config_any}" >"${config_any}-tym"
-			else
-				# There's no saved configuration, so assume that we last emerged it
-				# and then deleted the temporary savedconfig, so we'll consider it
-				# now up-to-date, as far as ${force_emerge} is concerned.
-				force_emerge=false
-				if ${needs_emerge}; then
-					# Since there's no saved configuration available, but we do need
-					# to emerge the package, emerge it once to create a default saved
-					# configuration, with USE=-savedconfig.
-					lUSE="${lUSE% savedconfig}"
-					rooted_emerge_raw_q -uNO ${pkg}
-					# Fix an issue in savedconfig.eclass: the saved configuration is
-					# placed in ${ROOT}/etc/portage/savedconfig instead of
-					# ${PORTAGE_CONFIGROOT}/etc/portage/savedconfig .
-					if [ ! -e "${config_bestavail}" ]; then
-						mv -f \
-							"${tym_root}etc/portage/savedconfig/${pkg_bestavail}" \
-							"${config_bestavail}"
-					fi
-					adjconfig_${pn} "${config_bestavail}" >"${config_any}-tym"
-					rm -f "${config_bestavail}"
-					# And now re-enable USE=savedconfig.
-					lUSE="${lUSE} savedconfig"
-				fi
-			fi
-			if ${needs_emerge} || ${force_emerge}; then
-				# Rename the adjusted configuration so that emerge will use it, but
-				# preserve a possibly existing same-name savedconfig.
-				if [ -f "${config_bestavail}" ]; then
-					mv -f "${config_bestavail}" "${config_bestavail}-notym"
-				fi
-				mv "${config_any}-tym" "${config_bestavail}"
-			fi
-		fi
+      # Check if there is a savedconfig that can be newer than the reference
+      # binary, in case of which we'll need to re-emerge even if no update is
+      # needed.
+      if [ -z "${refbin}" ]; then
+         force_emerge=false
+      else
+         config_any=${savedconfigs}${pkg}
+         # Ensure that the category's savedconfig directory exists.
+         mkdir -p "${config_any%/*}"
+         # Find out which version is currently installed, if any.
+         pkg_bestinst=$(portageq best_version "${tym_parent}" ${pkg})
+         config_bestinst=${savedconfigs}${pkg_bestinst}
+         # Find out which version would be installed.
+         pkg_bestavail=$(portageq best_visible "${tym_parent}" ${pkg})
+         config_bestavail=${savedconfigs}${pkg_bestavail}
+         # Pick the newest saved configuration, and check if it's more recent
+         # than the reference binary.
+         force_emerge=true
+         if [ -n "${pkg_bestavail}" -a -e "${config_bestavail}" ]; then
+            [ ${refbin} -nt "${config_bestavail}" ] && force_emerge=false
+            adjconfig_${pn} "${config_bestavail}" >"${config_any}-tym"
+         elif [ -n "${pkg_bestinst}" -a -e "${config_bestinst}" ]; then
+            [ ${refbin} -nt "${config_bestinst}" ] && force_emerge=false
+            adjconfig_${pn} "${config_bestinst}" >"${config_any}-tym"
+         elif [ -e "${config_any}" ]; then
+            [ ${refbin} -nt "${config_any}" ] && force_emerge=false
+            adjconfig_${pn} "${config_any}" >"${config_any}-tym"
+         else
+            # There's no saved configuration, so assume that we last emerged it
+            # and then deleted the temporary savedconfig, so we'll consider it
+            # now up-to-date, as far as ${force_emerge} is concerned.
+            force_emerge=false
+            if ${needs_emerge}; then
+               # Since there's no saved configuration available, but we do need
+               # to emerge the package, emerge it once to create a default saved
+               # configuration, with USE=-savedconfig.
+               lUSE="${lUSE% savedconfig}"
+               rooted_emerge_raw_q -uNO ${pkg}
+               # Fix an issue in savedconfig.eclass: the saved configuration is
+               # placed in ${ROOT}/etc/portage/savedconfig instead of
+               # ${PORTAGE_CONFIGROOT}/etc/portage/savedconfig .
+               if [ ! -e "${config_bestavail}" ]; then
+                  mv -f \
+                     "${tym_root}etc/portage/savedconfig/${pkg_bestavail}" \
+                     "${config_bestavail}"
+               fi
+               adjconfig_${pn} "${config_bestavail}" >"${config_any}-tym"
+               rm -f "${config_bestavail}"
+               # And now re-enable USE=savedconfig.
+               lUSE="${lUSE} savedconfig"
+            fi
+         fi
+         if ${needs_emerge} || ${force_emerge}; then
+            # Rename the adjusted configuration so that emerge will use it, but
+            # preserve a possibly existing same-name savedconfig.
+            if [ -f "${config_bestavail}" ]; then
+               mv -f "${config_bestavail}" "${config_bestavail}-notym"
+            fi
+            mv "${config_any}-tym" "${config_bestavail}"
+         fi
+      fi
 
-		if ${needs_emerge} || ${force_emerge}; then
-			rooted_emerge_raw_q -uNO ${pkg}
-			ret=${?}
-		else
-			ret=0
-		fi
+      if ${needs_emerge} || ${force_emerge}; then
+         rooted_emerge_raw_q -uNO ${pkg}
+         ret=${?}
+      else
+         ret=0
+      fi
 
-		if [ -n "${refbin}" ]; then
-			if ${needs_emerge} || ${force_emerge}; then
-				# Rename the adjusted saved configuration to avoid affecting the
-				# parent environment, and restore the previous one, if any.
-				mv -f "${config_bestavail}" "${config_any}-tym"
-				if [ -f "${config_bestavail}-notym" ]; then
-					mv -f "${config_bestavail}-notym" "${config_bestavail}"
-				fi
-				# Delete the file abandoned by savedconfig.eclass.
-				rm -f "${tym_root}etc/portage/savedconfig/${pkg_bestavail}"
-			fi
-			unset refbin
-		fi
+      if [ -n "${refbin}" ]; then
+         if ${needs_emerge} || ${force_emerge}; then
+            # Rename the adjusted saved configuration to avoid affecting the
+            # parent environment, and restore the previous one, if any.
+            mv -f "${config_bestavail}" "${config_any}-tym"
+            if [ -f "${config_bestavail}-notym" ]; then
+               mv -f "${config_bestavail}-notym" "${config_bestavail}"
+            fi
+            # Delete the file abandoned by savedconfig.eclass.
+            rm -f "${tym_root}etc/portage/savedconfig/${pkg_bestavail}"
+         fi
+         unset refbin
+      fi
 
-		[ ${ret} -eq 0 ] || break
-	done
-	unset lUSE lEXTRA_ECONF
-	return ${ret}
+      [ ${ret} -eq 0 ] || break
+   done
+   unset lUSE lEXTRA_ECONF
+   return ${ret}
 }
 
 
 # Filters/enriches BusyBox's saved configuration file, ensuring that /init's
 # dependencies are satisfied and avoiding any compatibility issues.
 adjconfig_busybox() {
-	awk -v sApplets="${bins_core_bb}" \
-	    -v sConfig="${busybox_config}" \
-	'
-		BEGIN {
-			# Assume that each applet has a corresponding CONFIG_ option.
-			sApplets = toupper(sApplets)
-			gsub(/[[:space:]]+/, "\n", sApplets)
-			# sConfig goes last, to override sApplets.
-			sConfig = sApplets "\n" sConfig
-			# Split on newlines.
-			split(sConfig, arrConfig, /\n+/)
-			for (i in arrConfig) {
-				s = arrConfig[i]
-				# Trim whitespace on both sides of the string.
-				sub(/^[[:space:]]+/, "", s)
-				sub(/[[:space:]]+$/, "", s)
-				# Skip empty lines and comments.
-				if (length(s) == 0 || substr(s, 1, 1) == "#")
-					continue
-				# sub() will return 0 or 1 here.
-				bDisable = sub(/^-/, "", s)
-				# Assume bDisable == 0, for now: we want to find a "not set" entry
-				# and replace it with an "=y" entry.
-				sFind = "# CONFIG_" s " is not set"
-				sRepl = "CONFIG_" s "=y"
-				if (bDisable) {
-					# Swap sRepl and sFind: look for "=y", replace with "not set".
-					s = sFind
-					sFind = sRepl
-					sRepl = s
-				}
-				# Avoid contradictory replacement pairs.
-				delete arrToggle[sRepl]
-				arrToggle[sFind] = sRepl
-			}
-		}
-		{
-			# Toggle every option in arrToggle, printing the rest as-is.
-			if ($0 in arrToggle)
-				print arrToggle[$0]
-			else
-				print
-		}
-	' <"${1}"
+   awk -v sApplets="${bins_core_bb}" \
+       -v sConfig="${busybox_config}" \
+   '
+      BEGIN {
+         # Assume that each applet has a corresponding CONFIG_ option.
+         sApplets = toupper(sApplets)
+         gsub(/[[:space:]]+/, "\n", sApplets)
+         # sConfig goes last, to override sApplets.
+         sConfig = sApplets "\n" sConfig
+         # Split on newlines.
+         split(sConfig, arrConfig, /\n+/)
+         for (i in arrConfig) {
+            s = arrConfig[i]
+            # Trim whitespace on both sides of the string.
+            sub(/^[[:space:]]+/, "", s)
+            sub(/[[:space:]]+$/, "", s)
+            # Skip empty lines and comments.
+            if (length(s) == 0 || substr(s, 1, 1) == "#")
+               continue
+            # sub() will return 0 or 1 here.
+            bDisable = sub(/^-/, "", s)
+            # Assume bDisable == 0, for now: we want to find a "not set" entry
+            # and replace it with an "=y" entry.
+            sFind = "# CONFIG_" s " is not set"
+            sRepl = "CONFIG_" s "=y"
+            if (bDisable) {
+               # Swap sRepl and sFind: look for "=y", replace with "not set".
+               s = sFind
+               sFind = sRepl
+               sRepl = s
+            }
+            # Avoid contradictory replacement pairs.
+            delete arrToggle[sRepl]
+            arrToggle[sFind] = sRepl
+         }
+      }
+      {
+         # Toggle every option in arrToggle, printing the rest as-is.
+         if ($0 in arrToggle)
+            print arrToggle[$0]
+         else
+            print
+      }
+   ' <"${1}"
 }
 refbin_busybox=bin/busybox
 USE_busybox='make-symlinks math mdev'
@@ -482,74 +482,74 @@ USE_busybox='make-symlinks math mdev'
 # Filters/enriches Dropbear's saved configuration file, making it lighter and
 # ensuring it suits our needs.
 adjconfig_dropbear() {
-	dropbear_config='
-		-DO_HOST_LOOKUP
-		DO_MOTD
-		-ENABLE_SVR_PAM_AUTH
-		-ENABLE_X11FWD
-		-INETD_MODE
-		-LOG_COMMANDS
-		NON_INETD_MODE
-		-SFTPSERVER_PATH
-	'
-	awk -v sConfig="${dropbear_config}" '
-		BEGIN {
-			sub(/^[[:space:]]+/, "", sConfig)
-			sub(/[[:space:]]+$/, "", sConfig)
-			split(sConfig, arrConfig, /[[:space:]]+/)
-			for (i in arrConfig) {
-				s = arrConfig[i]
-				bDisable = sub(/^-/, "", s)
-				if (!bDisable)
-					print "#define " s
-				arrDelete[s] = 1
-			}
-		}
-		# If disabled, delete it; if enabled, it has been printed in BEGIN, so
-		# delete any other occurrence.
-		!($1 == "#define" && $2 in arrDelete) &&
-		!($1 == "#" && $2 == "define" && $3 in arrDelete)
-	' <"${1}"
+   dropbear_config='
+      -DO_HOST_LOOKUP
+      DO_MOTD
+      -ENABLE_SVR_PAM_AUTH
+      -ENABLE_X11FWD
+      -INETD_MODE
+      -LOG_COMMANDS
+      NON_INETD_MODE
+      -SFTPSERVER_PATH
+   '
+   awk -v sConfig="${dropbear_config}" '
+      BEGIN {
+         sub(/^[[:space:]]+/, "", sConfig)
+         sub(/[[:space:]]+$/, "", sConfig)
+         split(sConfig, arrConfig, /[[:space:]]+/)
+         for (i in arrConfig) {
+            s = arrConfig[i]
+            bDisable = sub(/^-/, "", s)
+            if (!bDisable)
+               print "#define " s
+            arrDelete[s] = 1
+         }
+      }
+      # If disabled, delete it; if enabled, it has been printed in BEGIN, so
+      # delete any other occurrence.
+      !($1 == "#define" && $2 in arrDelete) &&
+      !($1 == "#" && $2 == "define" && $3 in arrDelete)
+   ' <"${1}"
 }
 refbin_dropbear=usr/sbin/dropbeard
 USE_dropbear='-minimal syslog zlib'
 EXTRA_ECONF_dropbear='
-	--disable-lastlog
-	--disable-utmp
-	--disable-utmpx
-	--disable-wtmp
-	--disable-wtmpx
-	--disable-loginfunc
-	--disable-pututline
-	--disable-pututxline
+   --disable-lastlog
+   --disable-utmp
+   --disable-utmpx
+   --disable-wtmp
+   --disable-wtmpx
+   --disable-loginfunc
+   --disable-pututline
+   --disable-pututxline
 '
 
 USE_nano='-minimal ncurses'
 EXTRA_ECONF_nano='
-	--disable-extra
-	--disable-browser
-	--disable-mouse
-	--disable-operatingdir
-	--disable-tabcomp
-	--disable-wrapping
+   --disable-extra
+   --disable-browser
+   --disable-mouse
+   --disable-operatingdir
+   --disable-tabcomp
+   --disable-wrapping
 '
 
 EXTRA_ECONF_e2fsprogs='
-	--enable-symlink-install
+   --enable-symlink-install
 '
 
 EXTRA_ECONF_ncurses='
-	--with-terminfo-dirs=/lib/terminfo
+   --with-terminfo-dirs=/lib/terminfo
 '
 
 
 #true ||
 rooted_emerge \
-	sys-libs/ncurses \
-	net-misc/dropbear \
-	sys-apps/busybox \
-	app-editors/nano \
-	sys-fs/e2fsprogs
+   sys-libs/ncurses \
+   net-misc/dropbear \
+   sys-apps/busybox \
+   app-editors/nano \
+   sys-fs/e2fsprogs
 
 eend ${?} || exit
 
@@ -588,37 +588,37 @@ eend ${?} || exit
 ebegin 'Determining binaries not built into BusyBox'
 # Remove binaries built into BB.
 bins=$(
-	# List all the symlinks to BusyBox.
-	find "${tym_root}" -lname busybox -printf '%f\n' |
-	awk -v sBins="${bins}" '
-		BEGIN {
-			# Import currently selected binaries.
-			sub(/^[[:space:]]+/, "", sBins)
-			sub(/[[:space:]]+$/, "", sBins)
-			split(sBins, arrBinNames, /[[:space:]]+/)
-			for (i in arrBinNames)
-				arrBins[arrBinNames[i]] = 1
-		}
-		# Remove binaries included in BB.
-		{
-			delete arrBins[$0]
-		}
-		END {
-			# Output a new binary list.
-			for (sBin in arrBins)
-				# Print type and name.
-				print arrBins[sBin] " " sBin
-		}
-	' |
-	while read -r type name; do
-		if [ ${type} -eq 1 ]; then
-			# 1 == name only: find out its full path.
-			env PATH="${rooted_path}" ${which} ${name}
-		elif [ ${type} -eq 2 ]; then
-			# 2 == relative path: make it absolute.
-			echo "${tym_root}${name}"
-		fi
-	done
+   # List all the symlinks to BusyBox.
+   find "${tym_root}" -lname busybox -printf '%f\n' |
+   awk -v sBins="${bins}" '
+      BEGIN {
+         # Import currently selected binaries.
+         sub(/^[[:space:]]+/, "", sBins)
+         sub(/[[:space:]]+$/, "", sBins)
+         split(sBins, arrBinNames, /[[:space:]]+/)
+         for (i in arrBinNames)
+            arrBins[arrBinNames[i]] = 1
+      }
+      # Remove binaries included in BB.
+      {
+         delete arrBins[$0]
+      }
+      END {
+         # Output a new binary list.
+         for (sBin in arrBins)
+            # Print type and name.
+            print arrBins[sBin] " " sBin
+      }
+   ' |
+   while read -r type name; do
+      if [ ${type} -eq 1 ]; then
+         # 1 == name only: find out its full path.
+         env PATH="${rooted_path}" ${which} ${name}
+      elif [ ${type} -eq 2 ]; then
+         # 2 == relative path: make it absolute.
+         echo "${tym_root}${name}"
+      fi
+   done
 )
 eend ${?} || exit
 
@@ -630,101 +630,101 @@ deps=
 # Initial set of files to scan for dependencies.
 scandeps="${bins}"
 while [ -n "${scandeps}" ]; do
-	# Get a list of dependencies of (current level) dependencies, omitting any
-	# libraries already accounted for.
-	scandeps=$(
-		"${CROSS_COMPILE}readelf" -dlW ${scandeps} |
-		awk -v sDeps="${deps}" -v sLDPath="${rooted_libpath}" '
-			function whichlib(sLib) {
-				# Check the cache first.
-				if (sLib in arrLibFullPaths)
-					return arrLibFullPaths[sLib];
-				sWhich = "for d in " sLDPath "; do" \
-					 "	lib=\"${d}/" sLib "\";" \
-					 "	[ -f \"${lib}\" ] && echo \"${lib}\" && break;" \
-					 "done"
-				sWhich | getline sFullPath
-				close(sWhich)
-				# Update the cache, and return the result.
-				arrLibFullPaths[sLib] = sFullPath
-				if (sFullPath)
-					return sFullPath
-				else
-					return "/unable/to/find/" sLib
-			}
+   # Get a list of dependencies of (current level) dependencies, omitting any
+   # libraries already accounted for.
+   scandeps=$(
+      "${CROSS_COMPILE}readelf" -dlW ${scandeps} |
+      awk -v sDeps="${deps}" -v sLDPath="${rooted_libpath}" '
+         function whichlib(sLib) {
+            # Check the cache first.
+            if (sLib in arrLibFullPaths)
+               return arrLibFullPaths[sLib];
+            sWhich = "for d in " sLDPath "; do" \
+                " lib=\"${d}/" sLib "\";" \
+                " [ -f \"${lib}\" ] && echo \"${lib}\" && break;" \
+                "done"
+            sWhich | getline sFullPath
+            close(sWhich)
+            # Update the cache, and return the result.
+            arrLibFullPaths[sLib] = sFullPath
+            if (sFullPath)
+               return sFullPath
+            else
+               return "/unable/to/find/" sLib
+         }
 
-			function addwithsoname(sDir, sLib) {
-				# Add these backends, same version as glibc, and their SONAME links,
-				# found out with objdump.
-				print sDir sLib
-				sObjDump = ENVIRON["CROSS_COMPILE"] "objdump -x " sDir sLib
-				# Tiny awk sub-program here :)
-				while ((sObjDump | getline) > 0)
-					if ($1 == "SONAME" && NF >= 2)
-						print sDir $2
-				close(sObjDump)
-			}
+         function addwithsoname(sDir, sLib) {
+            # Add these backends, same version as glibc, and their SONAME links,
+            # found out with objdump.
+            print sDir sLib
+            sObjDump = ENVIRON["CROSS_COMPILE"] "objdump -x " sDir sLib
+            # Tiny awk sub-program here :)
+            while ((sObjDump | getline) > 0)
+               if ($1 == "SONAME" && NF >= 2)
+                  print sDir $2
+            close(sObjDump)
+         }
 
-			BEGIN {
-				# Convert this for whichlib().
-				gsub(/:/, " ", sLDPath)
-				# Import currently collected dependencies.
-				sub(/^[[:space:]]+/, "", sDeps)
-				sub(/[[:space:]]+$/, "", sDeps)
-				split(sDeps, arrDepNames, /[[:space:]]+/)
-				for (i in arrDepNames)
-					arrDeps[arrDepNames[i]] = 1
-			}
-			{
-				if (match( \
-					$0, \
-					/^[[:space:]]*\[Requesting program interpreter: / \
-				)) {
-					#      [Requesting program interpreter: /lib/ld-linux.so.2]
-					s = substr($0, 1 + RLENGTH, length() - RLENGTH - 1)
-					# Make it a relative path, so we can search for it with
-					# whichlib().
-					sub(/^.*\//, "", s)
-				} else if ($2 == "(NEEDED)")
-					# 0x00000001 (NEEDED) Shared library: [libc.so.6]
-					s = substr($5, 2, length($5) - 2)
-				else
-					next
-				s = whichlib(s)
-				# If it is a new dependency, add it to the list.
-				if (s in arrDeps)
-					next
-				arrScanDeps[s] = 1
-				# Check if it is a symlink.
-				sReadLink = "readlink -m \"" s "\""
-				sReadLink | getline s
-				close(sReadLink)
-				# If s was a symlink, skip it if its target has been added already;
-				# if it was not, this test will always be true.
-				if (s in arrDeps)
-					next
-				arrScanDeps[s] = 1
-			}
-			END {
-				bGlibc = (ENVIRON["ELIBC"] == "glibc")
-				for (s in arrScanDeps) {
-					print s
-					# If adding glibc, also add nsswitch.
-					if (bGlibc && match(s, /\/libc-[.0-9]+\.so$/)) {
-						# Extract the matched version number, and leave the path.
-						sVer = substr(s, RSTART + 6, RLENGTH - 6 - 3)
-						sub(/[^\/]*$/, "", s)
-						# Add these basic backends.
-						addwithsoname(s, "libnss_compat-" sVer ".so")
-						addwithsoname(s, "libnss_dns-" sVer ".so")
-						addwithsoname(s, "libnss_files-" sVer ".so")
-					}
-				}
-			}
-		'
-	)
-	# Add the newly discovered dependencies to ${deps}.
-	deps="${deps} ${scandeps}"
+         BEGIN {
+            # Convert this for whichlib().
+            gsub(/:/, " ", sLDPath)
+            # Import currently collected dependencies.
+            sub(/^[[:space:]]+/, "", sDeps)
+            sub(/[[:space:]]+$/, "", sDeps)
+            split(sDeps, arrDepNames, /[[:space:]]+/)
+            for (i in arrDepNames)
+               arrDeps[arrDepNames[i]] = 1
+         }
+         {
+            if (match( \
+               $0, \
+               /^[[:space:]]*\[Requesting program interpreter: / \
+            )) {
+               #      [Requesting program interpreter: /lib/ld-linux.so.2]
+               s = substr($0, 1 + RLENGTH, length() - RLENGTH - 1)
+               # Make it a relative path, so we can search for it with
+               # whichlib().
+               sub(/^.*\//, "", s)
+            } else if ($2 == "(NEEDED)")
+               # 0x00000001 (NEEDED) Shared library: [libc.so.6]
+               s = substr($5, 2, length($5) - 2)
+            else
+               next
+            s = whichlib(s)
+            # If it is a new dependency, add it to the list.
+            if (s in arrDeps)
+               next
+            arrScanDeps[s] = 1
+            # Check if it is a symlink.
+            sReadLink = "readlink -m \"" s "\""
+            sReadLink | getline s
+            close(sReadLink)
+            # If s was a symlink, skip it if its target has been added already;
+            # if it was not, this test will always be true.
+            if (s in arrDeps)
+               next
+            arrScanDeps[s] = 1
+         }
+         END {
+            bGlibc = (ENVIRON["ELIBC"] == "glibc")
+            for (s in arrScanDeps) {
+               print s
+               # If adding glibc, also add nsswitch.
+               if (bGlibc && match(s, /\/libc-[.0-9]+\.so$/)) {
+                  # Extract the matched version number, and leave the path.
+                  sVer = substr(s, RSTART + 6, RLENGTH - 6 - 3)
+                  sub(/[^\/]*$/, "", s)
+                  # Add these basic backends.
+                  addwithsoname(s, "libnss_compat-" sVer ".so")
+                  addwithsoname(s, "libnss_dns-" sVer ".so")
+                  addwithsoname(s, "libnss_files-" sVer ".so")
+               }
+            }
+         }
+      '
+   )
+   # Add the newly discovered dependencies to ${deps}.
+   deps="${deps} ${scandeps}"
 done
 eend ${?} || exit
 
@@ -734,32 +734,32 @@ ebegin 'Adding binaries and their dependencies'
 
 # Copies every binary or dependency to ${tym_work}, keeping its relative path.
 image_copy_bins_and_deps() {
-	local src dst
-	for src in ${bins} ${deps}; do
-		if [ "${src#${tym_root}}" != "${src}" ]; then
-			# Remove the ${tym_root} root.
-			dst="${src#${tym_root}}"
-		elif [ "${src#${tym_parent}}" != "${src}" ]; then
-			# Remove the ${tym_parent} root.
-			dst="${src#${tym_parent}}"
-		else
-			eerror "Cannot find dependency '${src}'"
-			return 1
-		fi
-		# Don't bother keeping separate bin, sbin and lib in /usr: remove "usr/" if
-		# present.
-		dst="${tym_work}${dst#usr/}"
-		cp -a "${src}" "${dst}" || return ${?}
-	done
+   local src dst
+   for src in ${bins} ${deps}; do
+      if [ "${src#${tym_root}}" != "${src}" ]; then
+         # Remove the ${tym_root} root.
+         dst="${src#${tym_root}}"
+      elif [ "${src#${tym_parent}}" != "${src}" ]; then
+         # Remove the ${tym_parent} root.
+         dst="${src#${tym_parent}}"
+      else
+         eerror "Cannot find dependency '${src}'"
+         return 1
+      fi
+      # Don't bother keeping separate bin, sbin and lib in /usr: remove "usr/" if
+      # present.
+      dst="${tym_work}${dst#usr/}"
+      cp -a "${src}" "${dst}" || return ${?}
+   done
 }
 
 
 # Makes links to the BusyBox applets.
 image_make_bb_links() {
-	(
-		cd "${tym_root}"
-		find -lname busybox -exec ln -s ../bin/busybox "${tym_work}{}" ";"
-	)
+   (
+      cd "${tym_root}"
+      find -lname busybox -exec ln -s ../bin/busybox "${tym_work}{}" ";"
+   )
 }
 
 
@@ -786,57 +786,57 @@ ln -s ../proc/mounts etc/mtab
 
 # Creates the basic users/groups in the files /etc/passwd, /etc/group and so on.
 config_create_users_and_groups() {
-	echo 'root:x:0:0::/:/bin/sh' >etc/passwd
-	echo 'root:x:0:' >etc/group
-	# 'yrf:pass'
-	echo 'root:$1$2yMecUvM$n6o/OjTWuHzxQftOBpGg//:15006:0:99999:7:::' >etc/shadow
-	echo 'root:!::' >etc/gshadow
-	chmod 0600 etc/shadow etc/gshadow
+   echo 'root:x:0:0::/:/bin/sh' >etc/passwd
+   echo 'root:x:0:' >etc/group
+   # 'yrf:pass'
+   echo 'root:$1$2yMecUvM$n6o/OjTWuHzxQftOBpGg//:15006:0:99999:7:::' >etc/shadow
+   echo 'root:!::' >etc/gshadow
+   chmod 0600 etc/shadow etc/gshadow
 }
 
 
 # Copies /etc/nanorc (if existing on the host) to the image being built,
 # disabling features that we took out of nano.
 config_copy_nanorc() {
-	local cfgroot=
-	if [ -e "${tym_parent}etc/nanorc" ]; then
-		cfgroot="${tym_parent}"
-	elif [ -e /etc/nanorc ]; then
-		cfgroot=/
-	fi
-	if [ -n "${cfgroot}" ]; then
-		# Filter nanorc, deleting lines that require disabled functionality. See
-		# the ${EXTRA_ECONF_nano} tweaks above.
-		awk '
-			BEGIN {
-				# From USE=-justify
-				arrUnavailOpts["brackets"] = 1
-				arrUnavailKeys["justify"] = 1
-				arrUnavailKeys["beginpara"] = 1
-				arrUnavailKeys["endpara"] = 1
-				arrUnavailKeys["fulljustify"] = 1
-				# From USE=-spell
-				arrUnavailOpts["speller"] = 1
-				# From --disable-extra
-				# <none>
-				# From --disable-browser
-				# <none>
-				# From --disable-mouse
-				arrUnavailOpts["mouse"] = 1
-				# From --disable-operatingdir
-				arrUnavailOpts["operatingdir"] = 1
-				# From --disable-tabcomp
-				# <none>
-				# From --disable-wrapping
-				arrUnavailOpts["brackets"] = 1
-				arrUnavailOpts["nowrap"] = 1
-			}
-			# Skip includes and unavailable set options and key bindings.
-			$1 != "include" &&
-			($1 != "set" || !($2 in arrUnavailOpts)) &&
-			($1 != "bind" || !($3 in arrUnavailKeys))
-		' <"${cfgroot}etc/nanorc" >etc/nanorc
-	fi
+   local cfgroot=
+   if [ -e "${tym_parent}etc/nanorc" ]; then
+      cfgroot="${tym_parent}"
+   elif [ -e /etc/nanorc ]; then
+      cfgroot=/
+   fi
+   if [ -n "${cfgroot}" ]; then
+      # Filter nanorc, deleting lines that require disabled functionality. See
+      # the ${EXTRA_ECONF_nano} tweaks above.
+      awk '
+         BEGIN {
+            # From USE=-justify
+            arrUnavailOpts["brackets"] = 1
+            arrUnavailKeys["justify"] = 1
+            arrUnavailKeys["beginpara"] = 1
+            arrUnavailKeys["endpara"] = 1
+            arrUnavailKeys["fulljustify"] = 1
+            # From USE=-spell
+            arrUnavailOpts["speller"] = 1
+            # From --disable-extra
+            # <none>
+            # From --disable-browser
+            # <none>
+            # From --disable-mouse
+            arrUnavailOpts["mouse"] = 1
+            # From --disable-operatingdir
+            arrUnavailOpts["operatingdir"] = 1
+            # From --disable-tabcomp
+            # <none>
+            # From --disable-wrapping
+            arrUnavailOpts["brackets"] = 1
+            arrUnavailOpts["nowrap"] = 1
+         }
+         # Skip includes and unavailable set options and key bindings.
+         $1 != "include" &&
+         ($1 != "set" || !($2 in arrUnavailOpts)) &&
+         ($1 != "bind" || !($3 in arrUnavailKeys))
+      ' <"${cfgroot}etc/nanorc" >etc/nanorc
+   fi
 }
 
 

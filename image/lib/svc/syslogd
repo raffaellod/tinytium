@@ -1,8 +1,8 @@
-# -*- coding: utf-8; mode: sh; tab-width: 3 -*-
-#-------------------------------------------------------------------------------
-# Tinytium
-# Copyright 2012 Raffaello D. Di Napoli
-#-------------------------------------------------------------------------------
+# -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
+#
+# Copyright 2012
+# Raffaello D. Di Napoli
+#
 # This file is part of Tinytium.
 #
 # Tinytium is free software: you can redistribute it and/or modify it under the
@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-#
+
 # Service script for BusyBox's syslogd/klogd. It starts syslogd and klogd, makes
 # the kernel quiet, and sets up a log reader on another VT.
 
@@ -28,63 +28,63 @@ SVC_NEEDS=
 
 
 svc_initconfig() {
-	local s
-	{
-		s=$(fgconsole)
-		echo "def_vt=${s}"
+   local s
+   {
+      s=$(fgconsole)
+      echo "def_vt=${s}"
 
-		s=$(awk '
-			BEGIN {
-				sVT = "12"
-			}
-			{
-				if (match(" " $0 " ", / tym:logvt=[0-9]* /))
-					sVT = substr($0, RSTART + 10, RLENGTH - 10)
-			}
-			END {
-				print sVT
-			}
-		' </proc/cmdline)
-		echo "syslog_vt=${s}"
+      s=$(awk '
+         BEGIN {
+            sVT = "12"
+         }
+         {
+            if (match(" " $0 " ", / tym:logvt=[0-9]* /))
+               sVT = substr($0, RSTART + 10, RLENGTH - 10)
+         }
+         END {
+            print sVT
+         }
+      ' </proc/cmdline)
+      echo "syslog_vt=${s}"
 
-		read -r s </proc/sys/kernel/printk
-		echo "def_printk='${s}'"
-	} >${1}
+      read -r s </proc/sys/kernel/printk
+      echo "def_printk='${s}'"
+   } >${1}
 }
 
 
 svc_start() {
-	syslogd -S -C512
-	# Also quiets printk's, so as not to clutter the shell.
-	klogd -c 1 -n &
-	echo ${!} >/run/klogd.pid
-	[ -n "${syslog_vt}" ] && (
-		# Give syslogd and klogd some time to set themselves up.
-		sleep 0.25
-		# Print any pending messages, then start a resident printer.
-		logread
-		logread -f
-	) >/dev/tty${syslog_vt} 2>&1 &
+   syslogd -S -C512
+   # Also quiets printk's, so as not to clutter the shell.
+   klogd -c 1 -n &
+   echo ${!} >/run/klogd.pid
+   [ -n "${syslog_vt}" ] && (
+      # Give syslogd and klogd some time to set themselves up.
+      sleep 0.25
+      # Print any pending messages, then start a resident printer.
+      logread
+      logread -f
+   ) >/dev/tty${syslog_vt} 2>&1 &
 }
 
 
 svc_stop() {
-	# Don't trust ${syslog_vt} stored in the config file; it might have been
-	# changed.
-	pid=$(pidof logread)
-	if [ -n "${pid}" ]; then
-		# Hackish way of determining on which vt logread is really
-		# running: resolve its stdin symlink.
-		logread_vt=$(readlink -f /proc/${pid}/fd/1)
-		logread_vt=${logread_vt#/dev/tty}
-		# Stop logging to that vt, and deallocate it.
-		chvt ${def_vt}
-		waitkill 1 ${pid}
-		deallocvt ${logread_vt}
-	fi
-	waitkill 1 -f /run/klogd.pid
-	waitkill 1 -f /run/syslogd.pid
-	# Restore the default printk verbosity.
-	echo "${def_printk}" >/proc/sys/kernel/printk
+   # Don't trust ${syslog_vt} stored in the config file; it might have been
+   # changed.
+   pid=$(pidof logread)
+   if [ -n "${pid}" ]; then
+      # Hackish way of determining on which vt logread is really
+      # running: resolve its stdin symlink.
+      logread_vt=$(readlink -f /proc/${pid}/fd/1)
+      logread_vt=${logread_vt#/dev/tty}
+      # Stop logging to that vt, and deallocate it.
+      chvt ${def_vt}
+      waitkill 1 ${pid}
+      deallocvt ${logread_vt}
+   fi
+   waitkill 1 -f /run/klogd.pid
+   waitkill 1 -f /run/syslogd.pid
+   # Restore the default printk verbosity.
+   echo "${def_printk}" >/proc/sys/kernel/printk
 }
 

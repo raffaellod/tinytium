@@ -1,9 +1,9 @@
 #!/bin/sh
-# -*- coding: utf-8; mode: sh; tab-width: 3 -*-
-#-------------------------------------------------------------------------------
-# Tinytium
-# Copyright 2013 Raffaello D. Di Napoli
-#-------------------------------------------------------------------------------
+# -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
+#
+# Copyright 2012
+# Raffaello D. Di Napoli
+#
 # This file is part of Tinytium.
 #
 # Tinytium is free software: you can redistribute it and/or modify it under the
@@ -18,45 +18,45 @@
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-#
+
 # Partition symlinks generator. Intended to be invoked by mdev, this maintains
 # symlinks in the /dev/disk/* directories to match any detected filesystems.
 
 
 part_links_add() {
-	local devattrs LABEL= UUID= TYPE=
-	# Get info on the device block.
-	devattrs="$(blkid ${MDEV})"
-	if [ ${?} -eq 0 -a -n "${devattrs}" ]; then
-		# Strip off the device name, leaving the attributes, which are then
-		# evaluated as environment variable assignments.
-		eval ${devattrs#*:}
-		# Make any relevant links. In case of conflicts, the last wins.
-		[ -n "${LABEL}" ] && ln -fs ../../${MDEV} "/dev/disk/by-label/${LABEL}"
-		[ -n "${UUID}"  ] && ln -fs ../../${MDEV} "/dev/disk/by-uuid/${UUID}"
+   local devattrs LABEL= UUID= TYPE=
+   # Get info on the device block.
+   devattrs="$(blkid ${MDEV})"
+   if [ ${?} -eq 0 -a -n "${devattrs}" ]; then
+      # Strip off the device name, leaving the attributes, which are then
+      # evaluated as environment variable assignments.
+      eval ${devattrs#*:}
+      # Make any relevant links. In case of conflicts, the last wins.
+      [ -n "${LABEL}" ] && ln -fs ../../${MDEV} "/dev/disk/by-label/${LABEL}"
+      [ -n "${UUID}"  ] && ln -fs ../../${MDEV} "/dev/disk/by-uuid/${UUID}"
 
-		if [ "${TYPE}" = swap ]; then
-			# If this is a hibernation image, create the /dev/resume link. Due to
-			# not passing -f to ln, only the first detected partition will be
-			# linked. This also works in case /init already created such link due
-			# to a resume= kernel parameter.
-			case "$(swap_signature ${MDEV})" in
-			(S[1-2]SUSPEND|ULSUSPEND)
-				ln -s ${MDEV} /dev/resume
-				;;
-			esac
-		fi
-	fi
+      if [ "${TYPE}" = swap ]; then
+         # If this is a hibernation image, create the /dev/resume link. Due to
+         # not passing -f to ln, only the first detected partition will be
+         # linked. This also works in case /init already created such link due
+         # to a resume= kernel parameter.
+         case "$(swap_signature ${MDEV})" in
+         (S[1-2]SUSPEND|ULSUSPEND)
+            ln -s ${MDEV} /dev/resume
+            ;;
+         esac
+      fi
+   fi
 }
 
 
 part_links_remove() {
-	local link
-	# Enumerate all candidate links.
-	for link in /dev/root /dev/resume /dev/disk/by-*/*; do
-		# Delete any links to the device being removed.
-		[ "${link}" -ef /dev/${MDEV} ] && rm -f "${link}"
-	done
+   local link
+   # Enumerate all candidate links.
+   for link in /dev/root /dev/resume /dev/disk/by-*/*; do
+      # Delete any links to the device being removed.
+      [ "${link}" -ef /dev/${MDEV} ] && rm -f "${link}"
+   done
 }
 
 

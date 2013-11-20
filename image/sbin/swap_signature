@@ -1,9 +1,9 @@
 #!/bin/sh
-# -*- coding: utf-8; mode: sh; tab-width: 3 -*-
-#-------------------------------------------------------------------------------
-# Tinytium
-# Copyright 2013 Raffaello D. Di Napoli
-#-------------------------------------------------------------------------------
+# -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
+#
+# Copyright 2013
+# Raffaello D. Di Napoli
+#
 # This file is part of Tinytium.
 #
 # Tinytium is free software: you can redistribute it and/or modify it under the
@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-#
+
 # One-liner that outputs the signature of a swap partition. Used to detect
 # hibernation images.
 

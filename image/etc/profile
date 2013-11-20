@@ -1,8 +1,8 @@
-# -*- coding: utf-8; mode: sh; tab-width: 3 -*-
-#-------------------------------------------------------------------------------
-# Tinytium
-# Copyright 2012 Raffaello D. Di Napoli
-#-------------------------------------------------------------------------------
+# -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
+#
+# Copyright 2012
+# Raffaello D. Di Napoli
+#
 # This file is part of Tinytium.
 #
 # Tinytium is free software: you can redistribute it and/or modify it under the
@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-#
+
 # Basic login script. Sets a simple prompt line, and activates colors if
 # supported.
 

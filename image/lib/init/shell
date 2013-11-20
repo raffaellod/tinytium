@@ -1,9 +1,9 @@
 #!/bin/sh
-# -*- coding: utf-8; mode: sh; tab-width: 3 -*-
-#-------------------------------------------------------------------------------
-# Tinytium
-# Copyright 2012 Raffaello D. Di Napoli
-#-------------------------------------------------------------------------------
+# -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
+#
+# Copyright 2012
+# Raffaello D. Di Napoli
+#
 # This file is part of Tinytium.
 #
 # Tinytium is free software: you can redistribute it and/or modify it under the
@@ -18,66 +18,66 @@
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-#
+
 # Part of init; only invoked when init encounters a problem. It can start an SSH
 # shell, a local shell, or just panic and die.
 
 
 if [ ${tym_errors} = ssh ]; then
-	info 'starting ssh server for remote rescue shell'
+   info 'starting ssh server for remote rescue shell'
 
-	# Store the rescue instructions for whoever will connect.
-	{
-		echo
-		echo 'Dropped to remote rescue shell.'
-		echo
-		echo 'The boot process was halted due to an error.'
-		echo "  To review log messages, enter \`logread'."
-		echo "  To resume the boot process, enter \`svc -a stop & exit'."
-		echo
-		for s; do
-			echo "${s}"
-		done
-		echo
-	} >/etc/motd
+   # Store the rescue instructions for whoever will connect.
+   {
+      echo
+      echo 'Dropped to remote rescue shell.'
+      echo
+      echo 'The boot process was halted due to an error.'
+      echo "  To review log messages, enter \`logread'."
+      echo "  To resume the boot process, enter \`svc -a stop & exit'."
+      echo
+      for s; do
+         echo "${s}"
+      done
+      echo
+   } >/etc/motd
 
-	svc dropbear start || panic 'unable to start ssh server'
+   svc dropbear start || panic 'unable to start ssh server'
 
-	# Now wait until somebody (i.e. an ssh user) stops all services with
-	#    svc -a stop.
-	svc -a wait
-	return 0
+   # Now wait until somebody (i.e. an ssh user) stops all services with
+   #    svc -a stop.
+   svc -a wait
+   return 0
 fi
 
 # If a break was requested, it certainly wasn't to just end up in panic, so this
 # is the default if tym:break was specified but tym:errors was not.
 if [ ${tym_errors} = shell -o -n "${tym_break}" ]; then
-	# Wait until any pending printk is flushed, then start syslogd.
-	sleep 0.25
-	svc syslogd start >/dev/null
+   # Wait until any pending printk is flushed, then start syslogd.
+   sleep 0.25
+   svc syslogd start >/dev/null
 
-	# Print the rescue instructions.
-	echo
-	echo 'Dropping to rescue shell.'
-	syslog_vt=$(sed -ne 's/^syslog_vt=//p' </etc/svc/syslogd.conf)
-	if [ -n "${syslog_vt}" ]; then
-		echo "  Log messages are on tty${syslog_vt}."
-	else
-		echo "  To review log messages, enter \`logread'."
-	fi
-	echo "  To resume the boot process, enter \`exit' or press Ctrl+D."
-	echo
-	for s; do
-		echo "${s}"
-	done
-	echo
+   # Print the rescue instructions.
+   echo
+   echo 'Dropping to rescue shell.'
+   syslog_vt=$(sed -ne 's/^syslog_vt=//p' </etc/svc/syslogd.conf)
+   if [ -n "${syslog_vt}" ]; then
+      echo "  Log messages are on tty${syslog_vt}."
+   else
+      echo "  To review log messages, enter \`logread'."
+   fi
+   echo "  To resume the boot process, enter \`exit' or press Ctrl+D."
+   echo
+   for s; do
+      echo "${s}"
+   done
+   echo
 
-	setsid cttyhack sh -il
+   setsid cttyhack sh -il
 
-	# Try resuming the boot process from where it was halted.
-	echo
-	svc -a stop
-	return 0
+   # Try resuming the boot process from where it was halted.
+   echo
+   svc -a stop
+   return 0
 fi
 
 panic 'rescue shell disabled'

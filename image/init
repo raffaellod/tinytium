@@ -1,9 +1,9 @@
 #!/bin/sh
-# -*- coding: utf-8; mode: sh; tab-width: 3 -*-
-#-------------------------------------------------------------------------------
-# Tinytium
-# Copyright 2012-2013 Raffaello D. Di Napoli
-#-------------------------------------------------------------------------------
+# -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
+#
+# Copyright 2012, 2013
+# Raffaello D. Di Napoli
+#
 # This file is part of Tinytium.
 #
 # Tinytium is free software: you can redistribute it and/or modify it under the
@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-#
+
 # The init program (PID 1).
 
 
@@ -41,94 +41,94 @@
 
 # Poor man's sed s///g.
 strsubst() {
-	eval local s=\${${1}}
-	while [ "${s##*${2}}" != "${s}" ]; do
-		s="${s%${2}*}${3}${s##*${2}}"
-	done
-	eval ${1}=\${s}
+   eval local s=\${${1}}
+   while [ "${s##*${2}}" != "${s}" ]; do
+      s="${s%${2}*}${3}${s##*${2}}"
+   done
+   eval ${1}=\${s}
 }
 
 
 info() {
-	# 6 = KERN_INFO
-	echo "<6>init[${$}]: ${1}" >/dev/kmsg
+   # 6 = KERN_INFO
+   echo "<6>init[${$}]: ${1}" >/dev/kmsg
 }
 
 warn() {
-	# 4 = KERN_WARNING
-	echo "<4>init[${$}]: warning: ${1}" >/dev/kmsg
+   # 4 = KERN_WARNING
+   echo "<4>init[${$}]: warning: ${1}" >/dev/kmsg
 }
 
 error() {
-	# 1 = KERN_ALERT
-	echo "<1>init[${$}]: error: ${1}" >/dev/kmsg
-	shift
-	shell "${@}"
+   # 1 = KERN_ALERT
+   echo "<1>init[${$}]: error: ${1}" >/dev/kmsg
+   shift
+   shell "${@}"
 }
 
 panic() {
-	# 0 = KERN_EMERG
-	{
-		echo "<0>init[${$}]: FATAL: ${1}"
-		echo "<0>init[${$}]: FATAL: boot aborted; panicking"
-	} >/dev/kmsg
-	# init exiting will trigger a kernel panic, which is probably the best
-	# thing to do at this point: at least, if panic= was specified, the kernel
-	# will reboot.
-	exit
+   # 0 = KERN_EMERG
+   {
+      echo "<0>init[${$}]: FATAL: ${1}"
+      echo "<0>init[${$}]: FATAL: boot aborted; panicking"
+   } >/dev/kmsg
+   # init exiting will trigger a kernel panic, which is probably the best
+   # thing to do at this point: at least, if panic= was specified, the kernel
+   # will reboot.
+   exit
 }
 
 shell() {
-	. /lib/init/shell "${@}"
+   . /lib/init/shell "${@}"
 }
 
 shellonbreak() {
-	local break
-	if [ "${tym_break#${1},}" != "${tym_break}" ]; then
-		tym_break="${tym_break#${1},}"
-		break=true
-	elif [ "${tym_break}" = ${1} ]; then
-		tym_break=
-		break=true
-	else
-		break=false
-	fi
-	${break} && shell "Breaking due to \`tym:break=${1}'."
+   local break
+   if [ "${tym_break#${1},}" != "${tym_break}" ]; then
+      tym_break="${tym_break#${1},}"
+      break=true
+   elif [ "${tym_break}" = ${1} ]; then
+      tym_break=
+      break=true
+   else
+      break=false
+   fi
+   ${break} && shell "Breaking due to \`tym:break=${1}'."
 }
 
 
 # Basic initial setup.
 
 mount_devtmpfs() {
-	if fstabinfo --quiet /dev; then
-		mount -n /dev
-	else
-		mount -n -t tmpfs -o "exec,nosuid,mode=0755,size=8M" mdev /dev
+   if fstabinfo --quiet /dev; then
+      mount -n /dev
+   else
+      mount -n -t tmpfs -o "exec,nosuid,mode=0755,size=8M" mdev /dev
 
-		# creating /dev/console and /dev/tty1 to be able to write
-		# to $CONSOLE with/without bootsplash before mdev creates it
-		[ -c /dev/console ] || mknod /dev/console c 5 1
-		[ -c /dev/tty1 ] || mknod /dev/tty1 c 4 1
+      # creating /dev/console and /dev/tty1 to be able to write
+      # to $CONSOLE with/without bootsplash before mdev creates it
+      [ -c /dev/console ] || mknod /dev/console c 5 1
+      [ -c /dev/tty1 ] || mknod /dev/tty1 c 4 1
 
-		# udevd will dup its stdin/stdout/stderr to /dev/null
-		# and we do not want a file which gets buffered in ram
-		[ -c /dev/null ] || mknod /dev/null c 1 3
+      # udevd will dup its stdin/stdout/stderr to /dev/null
+      # and we do not want a file which gets buffered in ram
+      [ -c /dev/null ] || mknod /dev/null c 1 3
 
-		# copy over any persistant things
-		if [ -d /lib/mdev/devices ] ; then
-			cp -RPp /lib/mdev/devices/* /dev 2>/dev/null
-		fi
+      # copy over any persistant things
+      if [ -d /lib/mdev/devices ] ; then
+         cp -RPp /lib/mdev/devices/* /dev 2>/dev/null
+      fi
 
-		# Not provided by sysfs but needed
-		ln -snf /proc/self/fd /dev/fd
-		ln -snf fd/0 /dev/stdin
-		ln -snf fd/1 /dev/stdout
-		ln -snf fd/2 /dev/stderr
-		[ -e /proc/kcore ] && ln -snf /proc/kcore /dev/core
+      # Not provided by sysfs but needed
+      ln -snf /proc/self/fd /dev/fd
+      ln -snf fd/0 /dev/stdin
+      ln -snf fd/1 /dev/stdout
+      ln -snf fd/2 /dev/stderr
+      [ -e /proc/kcore ] && ln -snf /proc/kcore /dev/core
 
-		# Create problematic directories
-		mkdir -p /dev/pts /dev/shm
-	fi
+      # Create problematic directories
+      mkdir -p /dev/pts /dev/shm
+   fi
 }
 
 
@@ -143,17 +143,17 @@ mkdir /dev/disk /dev/disk/by-label /dev/disk/by-uuid
 
 # Kernel command line processing functions.
 getarg() {
-	[ "${cmdline#* ${1} }" != "${cmdline}" ]
+   [ "${cmdline#* ${1} }" != "${cmdline}" ]
 }
 getargv() {
-	local tail="${cmdline#* ${1}=}"
-	if [ "${tail}" != "${cmdline}" ]; then
-		eval ${2:-${1}}=\${tail%% *}
-		return 0
-	else
-		unset ${1}
-		return 1
-	fi
+   local tail="${cmdline#* ${1}=}"
+   if [ "${tail}" != "${cmdline}" ]; then
+      eval ${2:-${1}}=\${tail%% *}
+      return 0
+   else
+      unset ${1}
+      return 1
+   fi
 }
 read -r cmdline </proc/cmdline
 cmdline=" ${cmdline} "
@@ -166,11 +166,11 @@ getargv 'tym:break' tym_break
 getargv 'tym:errors' tym_errors || tym_errors=panic
 case "${tym_errors}" in
 (panic|shell|ssh)
-	;;
+   ;;
 (*)
-	warn "invalid tym:errors value \`${tym_errors}', defaulting to \`panic'"
-	tym_errors=panic
-	;;
+   warn "invalid tym:errors value \`${tym_errors}', defaulting to \`panic'"
+   tym_errors=panic
+   ;;
 esac
 shellonbreak cmdline
 
@@ -179,17 +179,17 @@ shellonbreak cmdline
 getargv root || panic 'no root argument provided'
 case "${root}" in
 (LABEL=?*)
-	strsubst root '/' '\x2f'
-	root=/dev/disk/by-label/${root#LABEL=}
-	;;
+   strsubst root '/' '\x2f'
+   root=/dev/disk/by-label/${root#LABEL=}
+   ;;
 (UUID=?*)
-	root=/dev/disk/by-uuid/${root#UUID=}
-	;;
+   root=/dev/disk/by-uuid/${root#UUID=}
+   ;;
 (/dev/?*)
-	;;
+   ;;
 (*)
-	panic "don't know how to handle \`root=${root}'"
-	;;
+   panic "don't know how to handle \`root=${root}'"
+   ;;
 esac
 # Create the /dev/resume symlink, and remember to wait for it.
 ln -s "${root#/dev/}" /dev/root
@@ -200,23 +200,23 @@ devs_waiting_for_root=true
 devs_waiting_for_resume=false
 unset resume
 if ! getarg noresume && getargv resume; then
-	case "${resume}" in
-	(LABEL=?*)
-		strsubst resume '/' '\x2f'
-		resume=/dev/disk/by-label/${resume#LABEL=}
-		;;
-	(UUID=?*)
-		resume=/dev/disk/by-uuid/${resume#UUID=}
-		;;
-	(/dev/?*)
-		;;
-	(*)
-		panic "don't know how to handle \`resume=${resume}'"
-		;;
-	esac
-	# Create the /dev/resume symlink, and remember to wait for it.
-	ln -s ${resume#/dev/} /dev/resume
-	devs_waiting_for_resume=true
+   case "${resume}" in
+   (LABEL=?*)
+      strsubst resume '/' '\x2f'
+      resume=/dev/disk/by-label/${resume#LABEL=}
+      ;;
+   (UUID=?*)
+      resume=/dev/disk/by-uuid/${resume#UUID=}
+      ;;
+   (/dev/?*)
+      ;;
+   (*)
+      panic "don't know how to handle \`resume=${resume}'"
+      ;;
+   esac
+   # Create the /dev/resume symlink, and remember to wait for it.
+   ln -s ${resume#/dev/} /dev/resume
+   devs_waiting_for_resume=true
 fi
 
 
@@ -224,14 +224,14 @@ fi
 # TODO: parallelism, maybe merge with code below using the output.
 find /sys -name modalias -exec cat \{\} + |
 awk '
-	{
-		# This merges duplicate lines on top of each other.
-		arrAliases[$0] = 1
-	}
-	END {
-		for (sAlias in arrAliases)
-			print sAlias
-	}
+   {
+      # This merges duplicate lines on top of each other.
+      arrAliases[$0] = 1
+   }
+   END {
+      for (sAlias in arrAliases)
+         print sAlias
+   }
 ' >/modaliases.lst
 
 # Populate /dev with existing devices from /sys
@@ -243,9 +243,9 @@ shellonbreak devs-modprobe
 [ -e /proc/sys/kernel/hotplug ] && echo /sbin/mdev >/proc/sys/kernel/hotplug
 # Load the modules for every device.
 while read -r modalias; do
-	# Ignore errors due to missing/excluded/blacklisted (TODO) modules.
-	# TODO: parallelism.
-	modprobe ${modalias} 2>/dev/null
+   # Ignore errors due to missing/excluded/blacklisted (TODO) modules.
+   # TODO: parallelism.
+   modprobe ${modalias} 2>/dev/null
 done </modaliases.lst
 
 
@@ -253,10 +253,10 @@ done </modaliases.lst
 
 # Generates the initial root mount options.
 cmdline_get_root_mount_opts() {
-	getarg rw && baserootflags=rw || baserootflags=ro
-	getargv rootflags
-	allrootflags=${baserootflags}${rootflags:+,${rootflags}}
-	getargv rootfstype || rootfstype=auto
+   getarg rw && baserootflags=rw || baserootflags=ro
+   getargv rootflags
+   allrootflags=${baserootflags}${rootflags:+,${rootflags}}
+   getargv rootfstype || rootfstype=auto
 }
 
 cmdline_get_root_mount_opts
@@ -264,15 +264,15 @@ cmdline_get_root_mount_opts
 
 # Determines if the kernel supports SELinux.
 detect_selinux_support() {
-	# Implementation: check for its filesystem.
-	local flags fstype
-	while read -r flags fstype; do
-		if [ "${fstype}" = selinuxfs ]; then
-			selinuxsupp=true
-			return
-		fi
-	done </proc/filesystems
-	selinuxsupp=false
+   # Implementation: check for its filesystem.
+   local flags fstype
+   while read -r flags fstype; do
+      if [ "${fstype}" = selinuxfs ]; then
+         selinuxsupp=true
+         return
+      fi
+   done </proc/filesystems
+   selinuxsupp=false
 }
 
 detect_selinux_support
@@ -280,19 +280,19 @@ detect_selinux_support
 
 # Generates the command line for /sbin/init by filtering the one for the kernel.
 cmdline_get_init_args() {
-	local arg
-	set -- ${cmdline}
-	shift
-	initargs=
-	for arg; do
-		case ${arg} in
-		# Only allow a few well-known arguments.
-		([0-9Ss]|auto|emergency|single)
-			initargs="${initargs} ${arg}"
-			;;
-		esac
-	done
-	echo "${initargs}"
+   local arg
+   set -- ${cmdline}
+   shift
+   initargs=
+   for arg; do
+      case ${arg} in
+      # Only allow a few well-known arguments.
+      ([0-9Ss]|auto|emergency|single)
+         initargs="${initargs} ${arg}"
+         ;;
+      esac
+   done
+   echo "${initargs}"
 }
 
 cmdline_get_init_args
@@ -303,59 +303,59 @@ cmdline_get_init_args
 # Extract the target (recursively resolved) of the /dev/root link into the
 # ${root} variable.
 get_root_from_symlink() {
-	[ -L /dev/root ] && root="$(readlink -f /dev/root)"
+   [ -L /dev/root ] && root="$(readlink -f /dev/root)"
 }
 
 # Extract the target (recursively resolved) of the /dev/resume link into the
 # ${resume} variable.
 get_resume_from_symlink() {
-	[ -L /dev/resume ] && resume="$(readlink -f /dev/resume)"
+   [ -L /dev/resume ] && resume="$(readlink -f /dev/resume)"
 }
 
 # Checks whether the wait for devices is over.
 devs_wait_is_over() {
-	# If a device we were wating for becomes available, stop waiting for it.
-	if ${devs_waiting_for_root} && [ -e /dev/root ]; then
-		devs_waiting_for_root=false
-	fi
-	if ${devs_waiting_for_resume} && [ -e /dev/resume ]; then
-		devs_waiting_for_resume=false
-	fi
-	# Report whether all waits are over.
-	! ${devs_waiting_for_root} && ! ${devs_waiting_for_resume}
+   # If a device we were wating for becomes available, stop waiting for it.
+   if ${devs_waiting_for_root} && [ -e /dev/root ]; then
+      devs_waiting_for_root=false
+   fi
+   if ${devs_waiting_for_resume} && [ -e /dev/resume ]; then
+      devs_waiting_for_resume=false
+   fi
+   # Report whether all waits are over.
+   ! ${devs_waiting_for_root} && ! ${devs_waiting_for_resume}
 }
 
 shellonbreak devs-wait
 i=0
 while :; do
-	# Check for really quick devices.
-	devs_wait_is_over && break
+   # Check for really quick devices.
+   devs_wait_is_over && break
 
-	# One or more devices is not online yet. Let's repeat this for an additional
-	# 10s before calling for user intervention.
-	sleep 0.25
-	# In messages, give priority to root.
-	if ${devs_waiting_for_root}; then
-		link=/dev/root
-		desc='root'
-	elif ${devs_waiting_for_resume}; then
-		link=/dev/resume
-		desc='hibernation image'
-	fi
-	dev=$(readlink ${link})
-	if [ $((++${i})) -eq 40 ]; then
-		# Number of attempts exceeded.
-		error "cannot find the ${desc} device" \
-			'You can either wait a little longer, if you are sure that' \
-			"  ${dev}" \
-			"is the correct ${desc} device and will eventually come online, or you can" \
-			"create a symlink from ${link} to the correct device."
-		# Now that we're back, resume from the beginning of the loop.
-		i=0
-	elif [ $((${i} % 12)) -eq 0 ]; then
-		# Print something every now and then (3s).
-		info "waiting for ${dev} ..."
-	fi
+   # One or more devices is not online yet. Let's repeat this for an additional
+   # 10s before calling for user intervention.
+   sleep 0.25
+   # In messages, give priority to root.
+   if ${devs_waiting_for_root}; then
+      link=/dev/root
+      desc='root'
+   elif ${devs_waiting_for_resume}; then
+      link=/dev/resume
+      desc='hibernation image'
+   fi
+   dev=$(readlink ${link})
+   if [ $((++${i})) -eq 40 ]; then
+      # Number of attempts exceeded.
+      error "cannot find the ${desc} device" \
+         'You can either wait a little longer, if you are sure that' \
+         "  ${dev}" \
+         "is the correct ${desc} device and will eventually come online, or you can" \
+         "create a symlink from ${link} to the correct device."
+      # Now that we're back, resume from the beginning of the loop.
+      i=0
+   elif [ $((${i} % 12)) -eq 0 ]; then
+      # Print something every now and then (3s).
+      info "waiting for ${dev} ..."
+   fi
 done
 
 
@@ -363,19 +363,19 @@ done
 shellonbreak resume
 get_resume_from_symlink
 if [ -n "${resume}" ]; then
-	info "resuming system from hibernation image in ${resume}"
-	signature=$(swap_signature "${resume}")
-	case "${signature}" in
-	(S[1-2]SUSPEND)
-		# Kernel suspend, use sysfs.
-		resume=$(stat -Lc'%t %T' "${resume}")
-		echo "$((0x${resume% *})):$((0x${resume#* }))" >/sys/power/resume
-		;;
-	(ULSUSPEND)
-		# TODO: does this work? Need to test swsusp.
-		/sbin/resume -r "${resume}"
-		;;
-	esac
+   info "resuming system from hibernation image in ${resume}"
+   signature=$(swap_signature "${resume}")
+   case "${signature}" in
+   (S[1-2]SUSPEND)
+      # Kernel suspend, use sysfs.
+      resume=$(stat -Lc'%t %T' "${resume}")
+      echo "$((0x${resume% *})):$((0x${resume#* }))" >/sys/power/resume
+      ;;
+   (ULSUSPEND)
+      # TODO: does this work? Need to test swsusp.
+      /sbin/resume -r "${resume}"
+      ;;
+   esac
 fi
 
 
@@ -384,56 +384,56 @@ shellonbreak mount
 get_root_from_symlink
 info "mounting ${root} (type: ${rootfstype}, options: ${allrootflags})"
 if ! mount -n -t ${rootfstype} -o "${allrootflags}" "${root}" /newroot; then
-	error "unable to mount ${root} as root" \
-		'You have to mount /newroot manually.'
-	# Check which device was mounted by the user as /newroot, so we can remount
-	# it later.
-	root=
-	while read -r dev mp rest; do
-		if [ ${mp} = /newroot ]; then
-			root=${dev}
-			# Also make sure it's symlinked by /dev/root.
-			[ /dev/root -ef "${root}" ] || ln -fs "${root#/dev/}" /dev/root
-			break
-		fi
-	done </proc/mounts
-	# If ${root} is still non-existent, there's no point in going ahead.
-	[ -e "${root}" ] || panic 'no root mounted in /newroot'
+   error "unable to mount ${root} as root" \
+      'You have to mount /newroot manually.'
+   # Check which device was mounted by the user as /newroot, so we can remount
+   # it later.
+   root=
+   while read -r dev mp rest; do
+      if [ ${mp} = /newroot ]; then
+         root=${dev}
+         # Also make sure it's symlinked by /dev/root.
+         [ /dev/root -ef "${root}" ] || ln -fs "${root#/dev/}" /dev/root
+         break
+      fi
+   done </proc/mounts
+   # If ${root} is still non-existent, there's no point in going ahead.
+   [ -e "${root}" ] || panic 'no root mounted in /newroot'
 fi
 
 # If no root mount options were specified and /newroot/etc/fstab contains
 # special mount options for it, remount the root with the options in fstab.
 if [ -z "${rootflags}" -a -f /newroot/etc/fstab ]; then
-	# Remounts / with the options in /etc/fstab contained in it.
-	remount_root_per_fstab() {
-		local dev mp rootfstype opts rest
-		while read -r dev mp rootfstype opts rest; do
-			# Skip comments, and only consider /.
-			if [ "${dev%%#*}" = "${dev}" -a "${mp}" = / ]; then
-				# Add leading and trailing commas for later.
-				rootflags=,${opts},
-				break
-			fi
-		done </newroot/etc/fstab
-		# Strip ro, rw and defaults.
-		strsubst rootflags ',r[ow],' ','
-		strsubst rootflags ',defaults,' ','
-		# Remove the added leading and trailing commas.
-		rootflags=${rootflags#,}
-		rootflags=${rootflags%,}
-		# If there are still any options left, use them.
-		if [ -n "${rootflags}" ]; then
-			allrootflags=${baserootflags},${rootflags}
-			info "remounting ${root} (type: ${rootfstype}, options: ${allrootflags})"
-			umount /newroot
-			if ! mount -n -t ${rootfstype} -o "${allrootflags}" "${root}" /newroot; then
-				error "unable to remount ${root} as root" \
-					'You will have to remount it manually.'
-			fi
-		fi
-	}
+   # Remounts / with the options in /etc/fstab contained in it.
+   remount_root_per_fstab() {
+      local dev mp rootfstype opts rest
+      while read -r dev mp rootfstype opts rest; do
+         # Skip comments, and only consider /.
+         if [ "${dev%%#*}" = "${dev}" -a "${mp}" = / ]; then
+            # Add leading and trailing commas for later.
+            rootflags=,${opts},
+            break
+         fi
+      done </newroot/etc/fstab
+      # Strip ro, rw and defaults.
+      strsubst rootflags ',r[ow],' ','
+      strsubst rootflags ',defaults,' ','
+      # Remove the added leading and trailing commas.
+      rootflags=${rootflags#,}
+      rootflags=${rootflags%,}
+      # If there are still any options left, use them.
+      if [ -n "${rootflags}" ]; then
+         allrootflags=${baserootflags},${rootflags}
+         info "remounting ${root} (type: ${rootfstype}, options: ${allrootflags})"
+         umount /newroot
+         if ! mount -n -t ${rootfstype} -o "${allrootflags}" "${root}" /newroot; then
+            error "unable to remount ${root} as root" \
+               'You will have to remount it manually.'
+         fi
+      fi
+   }
 
-	remount_root_per_fstab
+   remount_root_per_fstab
 fi
 
 
@@ -441,26 +441,26 @@ fi
 shellonbreak pre-init
 getargv init || init=/sbin/init
 [ -n "${init}" ] ||
-	panic "argument \`init=' must specify a valid executable"
+   panic "argument \`init=' must specify a valid executable"
 if ! [ -f /newroot${init} -a -x /newroot${init} ]; then
-	error "cannot find ${init} to run as init - wrong root filesystem?" \
-		"Please mount the correct root filesystem where ${init} can be found."
+   error "cannot find ${init} to run as init - wrong root filesystem?" \
+      "Please mount the correct root filesystem where ${init} can be found."
 fi
 
 if ${selinuxsupp}; then
-	: # TODO: load SELinux policy.
+   : # TODO: load SELinux policy.
 fi
 
 # Terminates any mdev-related activity.
 mdev_quit() {
-	# Remove the kernel hotplug handler.
-	[ -e /proc/sys/kernel/hotplug ] && echo '' >/proc/sys/kernel/hotplug
-	# Wait until all mdev processes have quit.
-	while pids=$(pidof mdev); do
-		for pid in ${pids}; do
-			kill -TERM ${pid} 2>/dev/null
-		done
-	done
+   # Remove the kernel hotplug handler.
+   [ -e /proc/sys/kernel/hotplug ] && echo '' >/proc/sys/kernel/hotplug
+   # Wait until all mdev processes have quit.
+   while pids=$(pidof mdev); do
+      for pid in ${pids}; do
+         kill -TERM ${pid} 2>/dev/null
+      done
+   done
 }
 
 mdev_quit
