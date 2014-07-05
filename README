@@ -1,22 +1,4 @@
-﻿Copyright 2012, 2013
-Raffaello D. Di Napoli
-
-This file is part of Tinytium.
-
-Tinytium is free software: you can redistribute it and/or modify it under the
-terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
-
-Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with
-Tinytium. If not, see <http://www.gnu.org/licenses/>.
---------------------------------------------------------------------------------
-
-1. Introduction
+﻿1. Introduction
 ---------------
 
 Tinytium is an initramfs generator based on Gentoo’s Portage. It features a
@@ -252,4 +234,25 @@ will typically result in the faulty operation to be retried if the break was
 caused by an error, of it will cause the execution of /init to be resumed if the
 interruption was due to request via kernel command line argument tym:break (see
 § 4.2. Configuring the Tinytium-generated initramfs).
+
+
+
+
+--------------------------------------------------------------------------------
+Copyright 2012, 2013, 2014
+Raffaello D. Di Napoli
+
+This file is part of Tinytium.
+
+Tinytium is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+Tinytium. If not, see <http://www.gnu.org/licenses/>.
 
