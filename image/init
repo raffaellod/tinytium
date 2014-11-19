@@ -251,17 +251,6 @@ done </modaliases.lst
 
 # And now, a few simple tasks to kill some time while we wait for the devices.
 
-# Generates the initial root mount options.
-cmdline_get_root_mount_opts() {
-   getarg rw && baserootflags=rw || baserootflags=ro
-   getargv rootflags
-   allrootflags=${baserootflags}${rootflags:+,${rootflags}}
-   getargv rootfstype || rootfstype=auto
-}
-
-cmdline_get_root_mount_opts
-
-
 # Determines if the kernel supports SELinux.
 detect_selinux_support() {
    # Implementation: check for its filesystem.
@@ -299,6 +288,28 @@ cmdline_get_init_args
 
 
 # End of simple tasks. Now just plain busy waiting.
+
+# Uses blkid to detect the type of filesystem in ${1}; returns 0 if successful, or 1 otherwise.
+detect_fs_type() {
+   local devattrs LABEL= UUID= TYPE=
+   # Get info on the device block.
+   devattrs="$(blkid ${1})"
+   if [ ${?} -eq 0 -a -n "${devattrs}" ]; then
+      # Strip off the device name, leaving the attributes, which are then
+      # evaluated as environment variable assignments.
+      eval ${devattrs#*:}
+      echo "${TYPE}"
+   fi
+   [ -n "${TYPE}" ]
+}
+
+# Generates the initial root mount options.
+cmdline_get_root_mount_opts() {
+   getarg rw && baserootflags=rw || baserootflags=ro
+   getargv rootflags
+   allrootflags=${baserootflags}${rootflags:+,${rootflags}}
+   getargv rootfstype || rootfstype="$(detect_fs_type ${root})" || rootfstype=auto
+}
 
 # Extract the target (recursively resolved) of the /dev/root link into the
 # ${root} variable.
@@ -382,6 +393,7 @@ fi
 # Try to mount the root filesystem.
 shellonbreak mount
 get_root_from_symlink
+cmdline_get_root_mount_opts
 info "mounting ${root} (type: ${rootfstype}, options: ${allrootflags})"
 if ! mount -n -t ${rootfstype} -o "${allrootflags}" "${root}" /newroot; then
    error "unable to mount ${root} as root" \
