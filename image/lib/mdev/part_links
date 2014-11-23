@@ -62,4 +62,3 @@ part_links_remove() {
 
 # Make "add" the default ACTION when invoked via mdev -s instead of hotplug.
 part_links_${ACTION:-add}
-

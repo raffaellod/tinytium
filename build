@@ -844,4 +844,3 @@ config_create_users_and_groups &&
 config_copy_nanorc
 
 eend ${?} || exit
-

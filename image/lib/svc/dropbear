@@ -48,4 +48,3 @@ svc_start() {
 svc_stop() {
    waitkill 10 -f /run/dropbear.pid
 }
-

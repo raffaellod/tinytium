@@ -87,4 +87,3 @@ svc_stop() {
    # Restore the default printk verbosity.
    echo "${def_printk}" >/proc/sys/kernel/printk
 }
-

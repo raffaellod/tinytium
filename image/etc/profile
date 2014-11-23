@@ -30,4 +30,3 @@ export PS1='tym \W # '
 export COLOR
 
 ${COLOR} && unset LS_COLORS || export LS_COLORS=
-

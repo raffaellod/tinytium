@@ -487,4 +487,3 @@ mount -o move /dev /newroot/dev &&
 exec switch_root /newroot ${init} ${initargs}
 # Fall through...
 error 'unable to switch to the requested root'
-

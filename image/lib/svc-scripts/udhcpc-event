@@ -93,4 +93,3 @@ case ${1} in
    echo "${0##*/}: unhandled: ${1}" >&2
    ;;
 esac
-

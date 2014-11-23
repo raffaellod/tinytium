@@ -134,4 +134,3 @@ svc_stop() {
    done
    ifconfig lo down
 }
-

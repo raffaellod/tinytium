@@ -24,4 +24,3 @@
 
 
 dd if=${1} bs=1 skip=4086 count=9 2>/dev/null
-

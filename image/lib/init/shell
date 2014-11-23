@@ -81,4 +81,3 @@ if [ ${tym_errors} = shell -o -n "${tym_break}" ]; then
 fi
 
 panic 'rescue shell disabled'
-

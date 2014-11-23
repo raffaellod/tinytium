@@ -6,4 +6,3 @@
    set
    echo
 } >>/hotplug.lst 2>&1
-

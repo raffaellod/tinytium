@@ -239,4 +239,3 @@ case "${SVC_ACTION}" in
 	die "invalid action requested: ${SVC_ACTION}"
 	;;
 esac
-
