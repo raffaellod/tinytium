@@ -229,7 +229,7 @@ daemons are started by Tinytium’s minimalistic init system.
    Tinytium-generated initramfs).
 
 After these services are started, the (possibly remote, if connected via SSH)
-used is presented with BusyBox’s ash. Exiting ash (via Ctrl+D or exit command)
+user is presented with BusyBox’s ash. Exiting ash (via Ctrl+D or exit command)
 will typically result in the faulty operation to be retried if the break was
 caused by an error, of it will cause the execution of /init to be resumed if the
 interruption was due to request via kernel command line argument tym:break (see
@@ -239,7 +239,7 @@ interruption was due to request via kernel command line argument tym:break (see
 
 
 --------------------------------------------------------------------------------
-Copyright 2012, 2013, 2014
+Copyright 2012, 2013, 2014, 2015
 Raffaello D. Di Napoli
 
 This file is part of Tinytium.
