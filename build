@@ -295,6 +295,7 @@ rooted_emerge_raw() {
    env ARCH=${PORTAGE_ARCH} \
       ROOT="${tym_root}" \
       PORTAGE_CONFIGROOT="${tym_parent}" \
+      CONFIG_PROTECT='-*' \
       FEATURES="-buildpkg -news nodoc noinfo noman ${lFEATURES}" \
       USE="${lUSE}" \
       EXTRA_ECONF="${lEXTRA_ECONF}" \
