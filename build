@@ -287,18 +287,20 @@ fi
 cd "${tym_root}"
 
 # Deploy the files in our root, using the parent's Portage configuration, while
-# allowing for USE and EXTRA_ECONF customizations. See
+# allowing for USE etc. customizations. See
 # <http://www.gentoo.org/proj/en/base/embedded/handbook/>.
 rooted_emerge_raw() {
    # The variable ARCH that's in the environment right now is for kmake, not
    # Portage; the correct variable is PORTAGE_ARCH.
-   env ARCH=${PORTAGE_ARCH} \
-      ROOT="${tym_root}" \
-      PORTAGE_CONFIGROOT="${tym_parent}" \
+   env \
+      ARCH=${PORTAGE_ARCH} \
       CONFIG_PROTECT='-*' \
-      FEATURES="-buildpkg -news nodoc noinfo noman ${lFEATURES}" \
-      USE="${lUSE}" \
       EXTRA_ECONF="${lEXTRA_ECONF}" \
+      FEATURES="-buildpkg -news nodoc noinfo noman ${lFEATURES}" \
+      INSTALL_MASK="${lINSTALL_MASK}" \
+      PORTAGE_CONFIGROOT="${tym_parent}" \
+      ROOT="${tym_root}" \
+      USE="${lUSE}" \
       "${CROSS_COMPILE}emerge" "${@}"
 }
 
@@ -322,7 +324,7 @@ rooted_emerge() {
       pn=$(echo ${pkg#*/} | sed -e 'y/-/_/; s/:.*$//')
 
       # Extract package-specific emerge environment variables.
-      for var in USE EXTRA_ECONF; do
+      for var in EXTRA_ECONF INSTALL_MASK USE; do
          eval l${var}=\"\${${var}} \${${var}_${pn}}\"
       done
       # This is NOT local.
@@ -424,7 +426,7 @@ rooted_emerge() {
 
       [ ${ret} -eq 0 ] || break
    done
-   unset lUSE lEXTRA_ECONF
+   unset lEXTRA_ECONF lINSTALL_MASK lUSE
    return ${ret}
 }
 
@@ -534,6 +536,7 @@ EXTRA_ECONF_nano='
    --disable-tabcomp
    --disable-wrapping
 '
+INSTALL_MASK_nano='/usr/bin/nano'
 
 EXTRA_ECONF_e2fsprogs='
    --enable-symlink-install
@@ -553,10 +556,6 @@ rooted_emerge \
    sys-fs/e2fsprogs
 
 eend ${?} || exit
-
-# Remove useless absolute symlink that would later confuse the binary
-# dependencies resolver.
-[ -L usr/bin/nano ] && rm usr/bin/nano
 
 
 
