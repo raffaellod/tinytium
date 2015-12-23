@@ -276,7 +276,8 @@ savedconfigs="${tym_parent}etc/portage/savedconfig/"
 
 
 # (Re)build packages needed by Tinytium, each with the appropriate options.
-ebegin 'Building/updating necessary packages'
+einfo 'Checking for necessary packages'
+eindent
 if [ ! -d "${tym_root}" ]; then
    mkdir -p "${tym_root}"
    if [ ${ARCH} = x86_64 ]; then
@@ -404,8 +405,10 @@ rooted_emerge() {
       fi
 
       if ${needs_emerge} || ${force_emerge}; then
+         ebegin "Building/updading ${pkg}"
          rooted_emerge_raw_q -uNO ${pkg}
          ret=${?}
+         eend ${ret}
       else
          ret=0
       fi
@@ -553,9 +556,9 @@ rooted_emerge \
    net-misc/dropbear \
    sys-apps/busybox \
    app-editors/nano \
-   sys-fs/e2fsprogs
-
-eend ${?} || exit
+   sys-fs/e2fsprogs ||
+exit
+eoutdent
 
 
 
