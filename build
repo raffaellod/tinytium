@@ -321,7 +321,7 @@ rooted_emerge() {
    local config_any pkg_bestavail pkg_bestinst config_bestavail config_bestinst
 
    for pkg; do
-      pn=$(echo ${pkg#*/} | sed -e 'y/-/_/; s/:.*$//')
+      pn=$(echo ${pkg#*/} | sed -e 's/:.*$//; y/-/_/')
 
       # Extract package-specific emerge environment variables.
       for var in EXTRA_ECONF INSTALL_MASK USE; do
