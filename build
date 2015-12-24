@@ -453,8 +453,9 @@ adjconfig_busybox() {
             sub(/^[[:space:]]+/, "", s)
             sub(/[[:space:]]+$/, "", s)
             # Skip empty lines and comments.
-            if (length(s) == 0 || substr(s, 1, 1) == "#")
+            if (length(s) == 0 || substr(s, 1, 1) == "#") {
                continue
+            }
             # sub() will return 0 or 1 here.
             bDisable = sub(/^-/, "", s)
             # Assume bDisable == 0, for now: we want to find a "not set" entry
@@ -474,10 +475,11 @@ adjconfig_busybox() {
       }
       {
          # Toggle every option in arrToggle, printing the rest as-is.
-         if ($0 in arrToggle)
+         if ($0 in arrToggle) {
             print arrToggle[$0]
-         else
+         } else {
             print
+         }
       }
    ' <"${1}"
 }
@@ -505,8 +507,9 @@ adjconfig_dropbear() {
          for (i in arrConfig) {
             s = arrConfig[i]
             bDisable = sub(/^-/, "", s)
-            if (!bDisable)
+            if (!bDisable) {
                print "#define " s
+            }
             arrDelete[s] = 1
          }
       }
@@ -598,8 +601,9 @@ bins=$(
          sub(/^[[:space:]]+/, "", sBins)
          sub(/[[:space:]]+$/, "", sBins)
          split(sBins, arrBinNames, /[[:space:]]+/)
-         for (i in arrBinNames)
+         for (i in arrBinNames) {
             arrBins[arrBinNames[i]] = 1
+         }
       }
       # Remove binaries included in BB.
       {
@@ -607,9 +611,10 @@ bins=$(
       }
       END {
          # Output a new binary list.
-         for (sBin in arrBins)
+         for (sBin in arrBins) {
             # Print type and name.
             print arrBins[sBin] " " sBin
+         }
       }
    ' |
    while read -r type name; do
@@ -639,8 +644,9 @@ while [ -n "${scandeps}" ]; do
       awk -v sDeps="${deps}" -v sLDPath="${rooted_libpath}" '
          function whichlib(sLib) {
             # Check the cache first.
-            if (sLib in arrLibFullPaths)
-               return arrLibFullPaths[sLib];
+            if (sLib in arrLibFullPaths) {
+               return arrLibFullPaths[sLib]
+            }
             sWhich = "for d in " sLDPath "; do" \
                 " lib=\"${d}/" sLib "\";" \
                 " [ -f \"${lib}\" ] && echo \"${lib}\" && break;" \
@@ -649,10 +655,11 @@ while [ -n "${scandeps}" ]; do
             close(sWhich)
             # Update the cache, and return the result.
             arrLibFullPaths[sLib] = sFullPath
-            if (sFullPath)
+            if (sFullPath) {
                return sFullPath
-            else
+            } else {
                return "/unable/to/find/" sLib
+            }
          }
 
          function addwithsoname(sDir, sLib) {
@@ -661,9 +668,11 @@ while [ -n "${scandeps}" ]; do
             print sDir sLib
             sObjDump = ENVIRON["CROSS_COMPILE"] "objdump -x " sDir sLib
             # Tiny awk sub-program here :)
-            while ((sObjDump | getline) > 0)
-               if ($1 == "SONAME" && NF >= 2)
+            while ((sObjDump | getline) > 0) {
+               if ($1 == "SONAME" && NF >= 2) {
                   print sDir $2
+               }
+            }
             close(sObjDump)
          }
 
@@ -674,8 +683,9 @@ while [ -n "${scandeps}" ]; do
             sub(/^[[:space:]]+/, "", sDeps)
             sub(/[[:space:]]+$/, "", sDeps)
             split(sDeps, arrDepNames, /[[:space:]]+/)
-            for (i in arrDepNames)
+            for (i in arrDepNames) {
                arrDeps[arrDepNames[i]] = 1
+            }
          }
          {
             if (match( \
@@ -687,15 +697,17 @@ while [ -n "${scandeps}" ]; do
                # Make it a relative path, so we can search for it with
                # whichlib().
                sub(/^.*\//, "", s)
-            } else if ($2 == "(NEEDED)")
+            } else if ($2 == "(NEEDED)") {
                # 0x00000001 (NEEDED) Shared library: [libc.so.6]
                s = substr($5, 2, length($5) - 2)
-            else
+            } else {
                next
+            }
             s = whichlib(s)
             # If it is a new dependency, add it to the list.
-            if (s in arrDeps)
+            if (s in arrDeps) {
                next
+            }
             arrScanDeps[s] = 1
             # Check if it is a symlink.
             sReadLink = "readlink -m \"" s "\""
@@ -703,8 +715,9 @@ while [ -n "${scandeps}" ]; do
             close(sReadLink)
             # If s was a symlink, skip it if its target has been added already;
             # if it was not, this test will always be true.
-            if (s in arrDeps)
+            if (s in arrDeps) {
                next
+            }
             arrScanDeps[s] = 1
          }
          END {

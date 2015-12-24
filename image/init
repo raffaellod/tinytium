@@ -229,8 +229,9 @@ awk '
       arrAliases[$0] = 1
    }
    END {
-      for (sAlias in arrAliases)
+      for (sAlias in arrAliases) {
          print sAlias
+      }
    }
 ' >/modaliases.lst
 
