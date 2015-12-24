@@ -142,10 +142,10 @@ mkdir /dev/disk /dev/disk/by-label /dev/disk/by-uuid
 
 
 # Kernel command line processing functions.
-getarg() {
+cmdline_has_flag() {
    [ "${cmdline#* ${1} }" != "${cmdline}" ]
 }
-getargv() {
+cmdline_arg_value() {
    local tail="${cmdline#* ${1}=}"
    if [ "${tail}" != "${cmdline}" ]; then
       eval ${2:-${1}}=\${tail%% *}
@@ -157,13 +157,13 @@ getargv() {
 }
 read -r cmdline </proc/cmdline
 cmdline=" ${cmdline} "
-getarg quiet && quiet=true || quiet=false
+cmdline_has_flag quiet && quiet=true || quiet=false
 info 'loaded, starting boot sequence'
 
 
 # Analyze a few basic options.
-getargv 'tym:break' tym_break
-getargv 'tym:errors' tym_errors || tym_errors=panic
+cmdline_arg_value 'tym:break' tym_break
+cmdline_arg_value 'tym:errors' tym_errors || tym_errors=panic
 case "${tym_errors}" in
 (panic|shell|ssh)
    ;;
@@ -176,7 +176,7 @@ shellonbreak cmdline
 
 
 # Find out the root filesystem.
-getargv root || panic 'no root argument provided'
+cmdline_arg_value root || panic 'no root argument provided'
 case "${root}" in
 (LABEL=?*)
    strsubst root '/' '\x2f'
@@ -199,7 +199,7 @@ devs_waiting_for_root=true
 # Determine whether to resume the system from hibernation.
 devs_waiting_for_resume=false
 unset resume
-if ! getarg noresume && getargv resume; then
+if ! cmdline_has_flag noresume && cmdline_arg_value resume; then
    case "${resume}" in
    (LABEL=?*)
       strsubst resume '/' '\x2f'
@@ -250,51 +250,12 @@ while read -r modalias; do
 done </modaliases.lst
 
 
-# And now, a few simple tasks to kill some time while we wait for the devices.
-
-# Determines if the kernel supports SELinux.
-detect_selinux_support() {
-   # Implementation: check for its filesystem.
-   local flags fstype
-   while read -r flags fstype; do
-      if [ "${fstype}" = selinuxfs ]; then
-         selinuxsupp=true
-         return
-      fi
-   done </proc/filesystems
-   selinuxsupp=false
-}
-
-detect_selinux_support
-
-
-# Generates the command line for /sbin/init by filtering the one for the kernel.
-cmdline_get_init_args() {
-   local arg
-   set -- ${cmdline}
-   shift
-   initargs=
-   for arg; do
-      case ${arg} in
-      # Only allow a few well-known arguments.
-      ([0-9Ss]|auto|emergency|single)
-         initargs="${initargs} ${arg}"
-         ;;
-      esac
-   done
-   echo "${initargs}"
-}
-
-cmdline_get_init_args
-
-
-# End of simple tasks. Now just plain busy waiting.
+# Wait for devices to come online.
 
 # Uses blkid to detect the type of filesystem in ${1}; returns 0 if successful, or 1 otherwise.
 detect_fs_type() {
-   local devattrs LABEL= UUID= TYPE=
    # Get info on the device block.
-   devattrs="$(blkid ${1})"
+   local LABEL= UUID= TYPE= devattrs="$(blkid ${1})"
    if [ ${?} -eq 0 -a -n "${devattrs}" ]; then
       # Strip off the device name, leaving the attributes, which are then
       # evaluated as environment variable assignments.
@@ -306,10 +267,10 @@ detect_fs_type() {
 
 # Generates the initial root mount options.
 cmdline_get_root_mount_opts() {
-   getarg rw && baserootflags=rw || baserootflags=ro
-   getargv rootflags
+   cmdline_has_flag rw && baserootflags=rw || baserootflags=ro
+   cmdline_arg_value rootflags
    allrootflags=${baserootflags}${rootflags:+,${rootflags}}
-   getargv rootfstype || rootfstype="$(detect_fs_type ${root})" || rootfstype=auto
+   cmdline_arg_value rootfstype || rootfstype="$(detect_fs_type ${root})" || rootfstype=auto
 }
 
 # Extract the target (recursively resolved) of the /dev/root link into the
@@ -452,7 +413,7 @@ fi
 
 # Check for init.
 shellonbreak pre-init
-getargv init || init=/sbin/init
+cmdline_arg_value init || init=/sbin/init
 [ -n "${init}" ] ||
    panic "argument \`init=' must specify a valid executable"
 if ! [ -f /newroot${init} -a -x /newroot${init} ]; then
@@ -460,19 +421,30 @@ if ! [ -f /newroot${init} -a -x /newroot${init} ]; then
       "Please mount the correct root filesystem where ${init} can be found."
 fi
 
-if ${selinuxsupp}; then
+# Determines if the kernel supports SELinux.
+is_selinux_supported() {
+   local flags fstype
+   while read -r flags fstype; do
+      if [ "${fstype}" = selinuxfs ]; then
+         return 0
+      fi
+   done </proc/filesystems
+   return 1
+}
+
+if is_selinux_supported; then
    : # TODO: load SELinux policy.
 fi
 
 # Terminates any mdev-related activity.
 mdev_quit() {
    # Remove the kernel hotplug handler.
-   [ -e /proc/sys/kernel/hotplug ] && echo '' >/proc/sys/kernel/hotplug
+   [ -e /proc/sys/kernel/hotplug ] && echo >/proc/sys/kernel/hotplug
    # Wait until all mdev processes have quit.
+   local pids
    while pids=$(pidof mdev); do
-      for pid in ${pids}; do
-         kill -TERM ${pid} 2>/dev/null
-      done
+      kill -TERM ${pids} 2>/dev/null
+      sleep 0.1
    done
 }
 
@@ -481,10 +453,23 @@ mdev_quit
 
 shellonbreak init
 
+# Generates the command line for /sbin/init by filtering the one for the kernel.
+get_init_args() {
+   local arg
+   for arg; do
+      case "${arg}" in
+      # Only allow a few well-known arguments.
+      ([0-9Ss]|auto|emergency|single)
+         echo "${arg}"
+         ;;
+      esac
+   done
+}
+
 info 'switching root'
 mount -o move /sys /newroot/sys &&
 mount -o move /proc /newroot/proc &&
 mount -o move /dev /newroot/dev &&
-exec switch_root /newroot ${init} ${initargs}
+exec switch_root /newroot ${init} $(get_init_args ${cmdline})
 # Fall through...
 error 'unable to switch to the requested root'
