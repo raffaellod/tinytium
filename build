@@ -306,8 +306,8 @@ rooted_emerge_raw() {
 
 # Quiet version of rooted_emerge_raw.
 rooted_emerge_raw_q() {
-   rooted_emerge_raw -q --quiet-build "${@}" >/dev/null
-#  rooted_emerge_raw -v "${@}"
+   rooted_emerge_raw --quiet --quiet-build "${@}" >/dev/null
+#  rooted_emerge_raw --verbose "${@}"
 }
 
 # Re-emerges each specified package, if necessary. If a variable named
@@ -378,7 +378,7 @@ rooted_emerge() {
                # to emerge the package, emerge it once to create a default saved
                # configuration, with USE=-savedconfig.
                lUSE="${lUSE% savedconfig}"
-               rooted_emerge_raw_q -uNO ${pkg}
+               rooted_emerge_raw_q --newuse --nodeps --update ${pkg}
                # Fix an issue in savedconfig.eclass: the saved configuration is
                # placed in ${ROOT}/etc/portage/savedconfig instead of
                # ${PORTAGE_CONFIGROOT}/etc/portage/savedconfig .
@@ -405,7 +405,7 @@ rooted_emerge() {
 
       if ${needs_emerge} || ${force_emerge}; then
          ebegin "Building/updading ${pkg}"
-         rooted_emerge_raw_q -uNO ${pkg}
+         rooted_emerge_raw_q --newuse --nodeps --update ${pkg}
          ret=${?}
          eend ${ret}
       else
