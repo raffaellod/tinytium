@@ -1,22 +1,23 @@
 #!/bin/sh
 # -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2012-2015 Raffaello D. Di Napoli
+# Copyright 2012-2015, 2017 Raffaello D. Di Napoli
 #
 # This file is part of Tinytium.
 #
-# Tinytium is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License as published by the Free Software
-# Foundation, either version 3 of the License, or (at your option) any later
-# version.
+# Tinytium is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option)
+# any later version.
 #
 # Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
-# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 
 # Image generation script for Tinytium. No assumptions are made on what/who
 # invoked this program; ${PWD} will be used as scratchpad directory.
@@ -43,16 +44,17 @@ bins_core_bb='
    test true
    udhcpc umount
 '
-# Same as above, but not provided by BB (i.e. no config option for them), or not
-# fully compatible in BB's implementation.
+# Same as above, but not provided by BB (i.e. no config option for them), or
+# not fully compatible in BB's implementation.
 bins_core_nobb='
    dropbear dropbearconvert dropbearkey
    sh
    tput
 '
-# Also gathered from the files mentioned above. Mostly features necessary to get
-# BB applets to behave as expected; for programs excluded due to compatibility
-# issues, see the comments in the files themselves (mainly /init).
+# Also gathered from the files mentioned above. Mostly features necessary to
+# get BB applets to behave as expected; for programs excluded due to
+# compatibility issues, see the comments in the files themselves (mainly
+# /init).
 busybox_config='
    ASH
    # Job control
@@ -228,28 +230,26 @@ bins="
    ${bins_disk}
 "
 
-
-# Bulk-exports Portage environment variables into our actual environment, mostly
-# to feed them back to Portage after we switch to our make.conf .
+# Bulk-exports Portage environment variables into our actual environment,
+# mostly to feed them back to Portage after we switch to our make.conf .
 portage_export() {
    local vars
    vars=$(
       portageq envvar "${@}" |
-      awk -v sVars="${*}" '
+      awk -vvars="${*}" '
          {
-            match(sVars, /^[^ ]*/)
-            print "export " substr(sVars, 1, RLENGTH) "='\''" $0 "'\''"
-            sVars = substr(sVars, RLENGTH + 2)
+            match(vars, /^[^ ]*/)
+            print "export " substr(vars, 1, RLENGTH) "='\''" $0 "'\''"
+            vars = substr(vars, RLENGTH + 2)
          }
       '
    )
    eval "${vars}"
 }
 
-
 # Don't assume that / is managed by Portage; / will be the "root environment".
-# Also, don't assume we're being called by kernel-gen, so let's find out ${ROOT}
-# independently.
+# Also, don't assume we're being called by kernel-gen, so let's find out
+# ${ROOT} independently.
 portage_export ROOT CHOST
 # This is the "parent (Portage) environment" from which the toolchain will be
 # borrowed.
@@ -265,14 +265,9 @@ tym_cache="${tym_parent}var/cache/tinytium/${CHOST}/"
 # Root of our Portage environment.
 tym_root="${tym_cache}root/"
 
-
-
-# Start of emerge phase. #######################################################
-
-
+# Start of emerge phase. #####################################################
 
 savedconfigs="${tym_parent}etc/portage/savedconfig/"
-
 
 # (Re)build packages needed by Tinytium, each with the appropriate options.
 einfo 'Checking for necessary packages'
@@ -286,8 +281,8 @@ if [ ! -d "${tym_root}" ]; then
 fi
 cd "${tym_root}"
 
-# Deploy the files in our root, using the parent's Portage configuration, while
-# allowing for USE etc. customizations. See
+# Deploy the files in our root, using the parent's Portage configuration,
+# while allowing for USE etc. customizations. See
 # <http://www.gentoo.org/proj/en/base/embedded/handbook/>.
 rooted_emerge_raw() {
    # The variable ARCH that's in the environment right now is for kmake, not
@@ -312,14 +307,14 @@ rooted_emerge_raw_q() {
 
 # Re-emerges each specified package, if necessary. If a variable named
 # refbin_<packagename> exists, its value is a file (part of the package) whose
-# last modification time is compared to that of an existing saved configuration
-# file (saved by USE=savedconfig); in case the latter is newer, the package will
-# be re-emerged. In case of packages using savedconfig, the configuration is
-# temporarily adjusted for Tinytium's purposes.
+# last modification time is compared to that of an existing saved
+# configuration file (saved by USE=savedconfig); in case the latter is newer,
+# the package will be re-emerged. In case of packages using savedconfig, the
+# configuration is temporarily adjusted for Tinytium's purposes.
 rooted_emerge() {
    local pn ret var lFEATURES force_emerge needs_emerge refbin
-   local config_any pkg_bestavail pkg_bestinst config_bestavail config_bestinst
-
+   local config_any pkg_bestavail pkg_bestinst
+   local config_bestavail config_bestinst
    for pkg; do
       pn=$(echo ${pkg#*/} | sed -e 's/:.*$//; y/-/_/')
 
@@ -369,18 +364,18 @@ rooted_emerge() {
             [ ${refbin} -nt "${config_any}" ] && force_emerge=false
             adjconfig_${pn} "${config_any}" >"${config_any}-tym"
          else
-            # There's no saved configuration, so assume that we last emerged it
-            # and then deleted the temporary savedconfig, so we'll consider it
-            # now up-to-date, as far as ${force_emerge} is concerned.
+            # There's no saved configuration, so assume that we last emerged
+            # it and then deleted the temporary savedconfig, so we'll consider
+            # it now up-to-date, as far as ${force_emerge} is concerned.
             force_emerge=false
             if ${needs_emerge}; then
-               # Since there's no saved configuration available, but we do need
-               # to emerge the package, emerge it once to create a default saved
-               # configuration, with USE=-savedconfig.
+               # Since there's no saved configuration available, but we do
+               # need to emerge the package, emerge it once to create a
+               # default saved configuration, with USE=-savedconfig.
                lUSE="${lUSE% savedconfig}"
                rooted_emerge_raw_q --newuse --nodeps --update ${pkg}
-               # Fix an issue in savedconfig.eclass: the saved configuration is
-               # placed in ${ROOT}/etc/portage/savedconfig instead of
+               # Fix an issue in savedconfig.eclass: the saved configuration
+               # is placed in ${ROOT}/etc/portage/savedconfig instead of
                # ${PORTAGE_CONFIGROOT}/etc/portage/savedconfig .
                if [ ! -e "${config_bestavail}" ]; then
                   mv -f \
@@ -394,8 +389,8 @@ rooted_emerge() {
             fi
          fi
          if ${needs_emerge} || ${force_emerge}; then
-            # Rename the adjusted configuration so that emerge will use it, but
-            # preserve a possibly existing same-name savedconfig.
+            # Rename the adjusted configuration so that emerge will use it,
+            # but preserve a possibly existing same-name savedconfig.
             if [ -f "${config_bestavail}" ]; then
                mv -f "${config_bestavail}" "${config_bestavail}-notym"
             fi
@@ -436,19 +431,19 @@ rooted_emerge() {
 # Filters/enriches BusyBox's saved configuration file, ensuring that /init's
 # dependencies are satisfied and avoiding any compatibility issues.
 adjconfig_busybox() {
-   awk -v sApplets="${bins_core_bb}" \
-       -v sConfig="${busybox_config}" \
+   awk -vapplets="${bins_core_bb}" \
+       -vconfig="${busybox_config}" \
    '
       BEGIN {
          # Assume that each applet has a corresponding CONFIG_ option.
-         sApplets = toupper(sApplets)
-         gsub(/[[:space:]]+/, "\n", sApplets)
-         # sConfig goes last, to override sApplets.
-         sConfig = sApplets "\n" sConfig
+         applets = toupper(applets)
+         gsub(/[[:space:]]+/, "\n", applets)
+         # config goes last, to override applets.
+         config = applets "\n" config
          # Split on newlines.
-         split(sConfig, arrConfig, /\n+/)
-         for (i in arrConfig) {
-            s = arrConfig[i]
+         split(config, config, /\n+/)
+         for (i in config) {
+            s = config[i]
             # Trim whitespace on both sides of the string.
             sub(/^[[:space:]]+/, "", s)
             sub(/[[:space:]]+$/, "", s)
@@ -457,26 +452,26 @@ adjconfig_busybox() {
                continue
             }
             # sub() will return 0 or 1 here.
-            bDisable = sub(/^-/, "", s)
-            # Assume bDisable == 0, for now: we want to find a "not set" entry
-            # and replace it with an "=y" entry.
-            sFind = "# CONFIG_" s " is not set"
-            sRepl = "CONFIG_" s "=y"
-            if (bDisable) {
-               # Swap sRepl and sFind: look for "=y", replace with "not set".
-               s = sFind
-               sFind = sRepl
-               sRepl = s
+            disable = sub(/^-/, "", s)
+            # Assume disable == 0, for now: we want to find a "not set"
+            # entry and replace it with an "=y" entry.
+            find = "# CONFIG_" s " is not set"
+            repl = "CONFIG_" s "=y"
+            if (disable) {
+               # Swap repl and find: look for "=y", replace with "not set".
+               s = find
+               find = repl
+               repl = s
             }
             # Avoid contradictory replacement pairs.
-            delete arrToggle[sRepl]
-            arrToggle[sFind] = sRepl
+            delete toggle[repl]
+            toggle[find] = repl
          }
       }
       {
-         # Toggle every option in arrToggle, printing the rest as-is.
-         if ($0 in arrToggle) {
-            print arrToggle[$0]
+         # Toggle every option in toggle, printing the rest as-is.
+         if ($0 in toggle) {
+            print toggle[$0]
          } else {
             print
          }
@@ -499,24 +494,24 @@ adjconfig_dropbear() {
       NON_INETD_MODE
       -SFTPSERVER_PATH
    '
-   awk -v sConfig="${dropbear_config}" '
+   awk -vconfig="${dropbear_config}" '
       BEGIN {
-         sub(/^[[:space:]]+/, "", sConfig)
-         sub(/[[:space:]]+$/, "", sConfig)
-         split(sConfig, arrConfig, /[[:space:]]+/)
-         for (i in arrConfig) {
-            s = arrConfig[i]
-            bDisable = sub(/^-/, "", s)
-            if (!bDisable) {
+         sub(/^[[:space:]]+/, "", config)
+         sub(/[[:space:]]+$/, "", config)
+         split(config, config, /[[:space:]]+/)
+         for (i in config) {
+            s = config[i]
+            disable = sub(/^-/, "", s)
+            if (!disable) {
                print "#define " s
             }
-            arrDelete[s] = 1
+            deletes[s] = 1
          }
       }
       # If disabled, delete it; if enabled, it has been printed in BEGIN, so
       # delete any other occurrence.
-      !($1 == "#define" && $2 in arrDelete) &&
-      !($1 == "#" && $2 == "define" && $3 in arrDelete)
+      !($1 == "#define" && $2 in deletes) &&
+      !($1 == "#" && $2 == "define" && $3 in deletes)
    ' <"${1}"
 }
 refbin_dropbear=usr/sbin/dropbeard
@@ -551,7 +546,6 @@ EXTRA_ECONF_ncurses='
    --with-terminfo-dirs=/lib/terminfo
 '
 
-
 #true ||
 rooted_emerge \
    'sys-libs/ncurses:0/5' \
@@ -562,58 +556,52 @@ rooted_emerge \
 exit
 eoutdent
 
-
-
-# End of emerge phase. #########################################################
-
-
+# End of emerge phase. #######################################################
 
 which=$(which which)
 cd "${tym_work}"
-rooted_path="${tym_root}usr/bin:${tym_root}usr/sbin:${tym_root}bin:${tym_root}sbin"
-rooted_libpath="${tym_root}usr/lib:${tym_root}lib:${tym_parent}usr/lib:${tym_parent}lib"
-
+rooted_path="${tym_root}usr/bin:${tym_root}usr/sbin:${tym_root}bin:"\
+"${tym_root}sbin"
+rooted_libpath="${tym_root}usr/lib:${tym_root}lib:${tym_parent}usr/lib:"\
+"${tym_parent}lib"
 
 ebegin 'Creating directories'
 [ ${ARCH} = x86_64 ] && ln -s lib lib64
 mkdir -p bin dev etc/svc newroot proc sys run/svc
 eend ${?} || exit
 
-
 ebegin 'Adding source files'
 cp -a "${tym_src}/image/"* .
 eend ${?} || exit
 
-
 ebegin 'Adding terminfo'
 cp -a "${tym_root}etc/terminfo" lib/
 eend ${?} || exit
-
 
 ebegin 'Determining binaries not built into BusyBox'
 # Remove binaries built into BB.
 bins=$(
    # List all the symlinks to BusyBox.
    find "${tym_root}" -lname busybox -printf '%f\n' |
-   awk -v sBins="${bins}" '
+   awk -vbins="${bins}" '
       BEGIN {
          # Import currently selected binaries.
-         sub(/^[[:space:]]+/, "", sBins)
-         sub(/[[:space:]]+$/, "", sBins)
-         split(sBins, arrBinNames, /[[:space:]]+/)
-         for (i in arrBinNames) {
-            arrBins[arrBinNames[i]] = 1
+         sub(/^[[:space:]]+/, "", bins)
+         sub(/[[:space:]]+$/, "", bins)
+         split(bins, bin_names, /[[:space:]]+/)
+         for (i in bin_names) {
+            bins[bin_names[i]] = 1
          }
       }
       # Remove binaries included in BB.
       {
-         delete arrBins[$0]
+         delete bins[$0]
       }
       END {
          # Output a new binary list.
-         for (sBin in arrBins) {
+         for (bin in bins) {
             # Print type and name.
-            print arrBins[sBin] " " sBin
+            print bins[bin] " " bin
          }
       }
    ' |
@@ -629,7 +617,6 @@ bins=$(
 )
 eend ${?} || exit
 
-
 ebegin 'Collecting shared object dependencies'
 portage_export ELIBC
 # Start with no collected dependencies.
@@ -641,56 +628,55 @@ while [ -n "${scandeps}" ]; do
    # libraries already accounted for.
    scandeps=$(
       "${CROSS_COMPILE}readelf" -dlW ${scandeps} |
-      awk -v sDeps="${deps}" -v sLDPath="${rooted_libpath}" '
-         function whichlib(sLib) {
+      awk -vdeps="${deps}" -vld_path="${rooted_libpath}" '
+         function whichlib(lib) {
             # Check the cache first.
-            if (sLib in arrLibFullPaths) {
-               return arrLibFullPaths[sLib]
+            if (lib in lib_full_paths) {
+               return lib_full_paths[lib]
             }
-            sWhich = "for d in " sLDPath "; do" \
-                " lib=\"${d}/" sLib "\";" \
+            which = "for d in " ld_path "; do" \
+                " lib=\"${d}/" lib "\";" \
                 " [ -f \"${lib}\" ] && echo \"${lib}\" && break;" \
                 "done"
-            sWhich | getline sFullPath
-            close(sWhich)
+            which | getline full_path
+            close(which)
             # Update the cache, and return the result.
-            arrLibFullPaths[sLib] = sFullPath
-            if (sFullPath) {
-               return sFullPath
+            lib_full_paths[lib] = full_path
+            if (full_path) {
+               return full_path
             } else {
-               return "/unable/to/find/" sLib
+               return "/unable/to/find/" lib
             }
          }
 
-         function addwithsoname(sDir, sLib) {
-            # Add these backends, same version as glibc, and their SONAME links,
-            # found out with objdump.
-            print sDir sLib
-            sObjDump = ENVIRON["CROSS_COMPILE"] "objdump -x " sDir sLib
+         function addwithsoname(dir, lib) {
+            # Add these backends, same version as glibc, and their SONAME
+            # links, found out with objdump.
+            print dir lib
+            objdump = ENVIRON["CROSS_COMPILE"] "objdump -x " dir lib
             # Tiny awk sub-program here :)
-            while ((sObjDump | getline) > 0) {
+            while ((objdump | getline) > 0) {
                if ($1 == "SONAME" && NF >= 2) {
-                  print sDir $2
+                  print dir $2
                }
             }
-            close(sObjDump)
+            close(objdump)
          }
 
          BEGIN {
             # Convert this for whichlib().
-            gsub(/:/, " ", sLDPath)
+            gsub(/:/, " ", ld_path)
             # Import currently collected dependencies.
-            sub(/^[[:space:]]+/, "", sDeps)
-            sub(/[[:space:]]+$/, "", sDeps)
-            split(sDeps, arrDepNames, /[[:space:]]+/)
-            for (i in arrDepNames) {
-               arrDeps[arrDepNames[i]] = 1
+            sub(/^[[:space:]]+/, "", deps)
+            sub(/[[:space:]]+$/, "", deps)
+            split(deps, dep_names, /[[:space:]]+/)
+            for (i in dep_names) {
+               deps[dep_names[i]] = 1
             }
          }
          {
             if (match( \
-               $0, \
-               /^[[:space:]]*\[Requesting program interpreter: / \
+               $0, /^[[:space:]]*\[Requesting program interpreter: / \
             )) {
                #      [Requesting program interpreter: /lib/ld-linux.so.2]
                s = substr($0, 1 + RLENGTH, length() - RLENGTH - 1)
@@ -705,34 +691,34 @@ while [ -n "${scandeps}" ]; do
             }
             s = whichlib(s)
             # If it is a new dependency, add it to the list.
-            if (s in arrDeps) {
+            if (s in deps) {
                next
             }
-            arrScanDeps[s] = 1
+            scan_deps[s] = 1
             # Check if it is a symlink.
-            sReadLink = "readlink -m \"" s "\""
-            sReadLink | getline s
-            close(sReadLink)
-            # If s was a symlink, skip it if its target has been added already;
-            # if it was not, this test will always be true.
-            if (s in arrDeps) {
+            readlink = "readlink -m \"" s "\""
+            readlink | getline s
+            close(readlink)
+            # If s was a symlink, skip it if its target has been added
+            # already; if it was not, this test will always be true.
+            if (s in deps) {
                next
             }
-            arrScanDeps[s] = 1
+            scan_deps[s] = 1
          }
          END {
-            bGlibc = (ENVIRON["ELIBC"] == "glibc")
-            for (s in arrScanDeps) {
+            glibc = (ENVIRON["ELIBC"] == "glibc")
+            for (s in scan_deps) {
                print s
                # If adding glibc, also add nsswitch.
-               if (bGlibc && match(s, /\/libc-[.0-9]+\.so$/)) {
+               if (glibc && match(s, /\/libc-[.0-9]+\.so$/)) {
                   # Extract the matched version number, and leave the path.
-                  sVer = substr(s, RSTART + 6, RLENGTH - 6 - 3)
+                  ver = substr(s, RSTART + 6, RLENGTH - 6 - 3)
                   sub(/[^\/]*$/, "", s)
                   # Add these basic backends.
-                  addwithsoname(s, "libnss_compat-" sVer ".so")
-                  addwithsoname(s, "libnss_dns-" sVer ".so")
-                  addwithsoname(s, "libnss_files-" sVer ".so")
+                  addwithsoname(s, "libnss_compat-" ver ".so")
+                  addwithsoname(s, "libnss_dns-"    ver ".so")
+                  addwithsoname(s, "libnss_files-"  ver ".so")
                }
             }
          }
@@ -743,9 +729,7 @@ while [ -n "${scandeps}" ]; do
 done
 eend ${?} || exit
 
-
 ebegin 'Adding binaries and their dependencies'
-
 
 # Copies every binary or dependency to ${tym_work}, keeping its relative path.
 image_copy_bins_and_deps() {
@@ -761,13 +745,12 @@ image_copy_bins_and_deps() {
          eerror "Cannot find dependency '${src}'"
          return 1
       fi
-      # Don't bother keeping separate bin, sbin and lib in /usr: remove "usr/" if
-      # present.
+      # Don't bother keeping separate bin, sbin and lib in /usr: remove "usr/"
+      # if present.
       dst="${tym_work}${dst#usr/}"
       cp -a "${src}" "${dst}" || return ${?}
    done
 }
-
 
 # Makes links to the BusyBox applets.
 image_make_bb_links() {
@@ -777,19 +760,16 @@ image_make_bb_links() {
    )
 }
 
-
 image_copy_bins_and_deps &&
 image_make_bb_links
 
 eend ${?} || exit
-
 
 ebegin 'Generating /etc/ld.so.cache'
 # TODO: what does this do on cross-compile, exactly? Does it really load
 # foreign binaries?
 ldconfig -r . 2>/dev/null
 eend ${?} || exit
-
 
 ebegin 'Creating/importing configuration files'
 
@@ -798,17 +778,17 @@ ln -s ../proc/mounts etc/mtab
 # If not using glibc, /etc/nsswitch is not necessary.
 [ ${ELIBC} != glibc ] && rm etc/nsswitch.conf
 
-
-# Creates the basic users/groups in the files /etc/passwd, /etc/group and so on.
+# Creates the basic users/groups in the files /etc/passwd, /etc/group and so
+# on.
 config_create_users_and_groups() {
    echo 'root:x:0:0::/:/bin/sh' >etc/passwd
    echo 'root:x:0:' >etc/group
    # 'yrf:pass'
-   echo 'root:$1$2yMecUvM$n6o/OjTWuHzxQftOBpGg//:15006:0:99999:7:::' >etc/shadow
+   echo 'root:$1$2yMecUvM$n6o/OjTWuHzxQftOBpGg//:15006:0:99999:7:::' \
+      >etc/shadow
    echo 'root:!::' >etc/gshadow
    chmod 0600 etc/shadow etc/gshadow
 }
-
 
 # Copies /etc/nanorc (if existing on the host) to the image being built,
 # disabling features that we took out of nano.
@@ -825,35 +805,34 @@ config_copy_nanorc() {
       awk '
          BEGIN {
             # From USE=-justify
-            arrUnavailOpts["brackets"] = 1
-            arrUnavailKeys["justify"] = 1
-            arrUnavailKeys["beginpara"] = 1
-            arrUnavailKeys["endpara"] = 1
-            arrUnavailKeys["fulljustify"] = 1
+            unavail_opts["brackets"] = 1
+            unavail_keys["justify"] = 1
+            unavail_keys["beginpara"] = 1
+            unavail_keys["endpara"] = 1
+            unavail_keys["fulljustify"] = 1
             # From USE=-spell
-            arrUnavailOpts["speller"] = 1
+            unavail_opts["speller"] = 1
             # From --disable-extra
             # <none>
             # From --disable-browser
             # <none>
             # From --disable-mouse
-            arrUnavailOpts["mouse"] = 1
+            unavail_opts["mouse"] = 1
             # From --disable-operatingdir
-            arrUnavailOpts["operatingdir"] = 1
+            unavail_opts["operatingdir"] = 1
             # From --disable-tabcomp
             # <none>
             # From --disable-wrapping
-            arrUnavailOpts["brackets"] = 1
-            arrUnavailOpts["nowrap"] = 1
+            unavail_opts["brackets"] = 1
+            unavail_opts["nowrap"] = 1
          }
          # Skip includes and unavailable set options and key bindings.
          $1 != "include" &&
-         ($1 != "set" || !($2 in arrUnavailOpts)) &&
-         ($1 != "bind" || !($3 in arrUnavailKeys))
+         ($1 != "set" || !($2 in unavail_opts)) &&
+         ($1 != "bind" || !($3 in unavail_keys))
       ' <"${cfgroot}etc/nanorc" >etc/nanorc
    fi
 }
-
 
 config_create_users_and_groups &&
 config_copy_nanorc

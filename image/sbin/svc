@@ -1,25 +1,26 @@
 #!/bin/sh
 # -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2012, 2014 Raffaello D. Di Napoli
+# Copyright 2012, 2014, 2017 Raffaello D. Di Napoli
 #
 # This file is part of Tinytium.
 #
-# Tinytium is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License as published by the Free Software
-# Foundation, either version 3 of the License, or (at your option) any later
-# version.
+# Tinytium is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option)
+# any later version.
 #
 # Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
-# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 
-# Minimalistic service start/stop utility. Handles service dependencies, and can
-# act (kind of) like sysvinit.
+# Minimalistic service start/stop utility. Handles service dependencies, and
+# can act (kind of) like sysvinit.
 
 
 linfo() {
@@ -62,7 +63,6 @@ die() {
 	exit ${2:-1}
 }
 
-
 # Waits at most ${1}s for a program to terminate politely, else kills it.
 #   waitkill 5 1706
 #   waitkill 5 -f /run/daemon.pid
@@ -88,11 +88,9 @@ waitkill() {
 	return 0
 }
 
-
 is_started() {
 	[ -e /run/svc/${1:-${SVC_NAME}}.started ]
 }
-
 
 is_started_text() {
 	is_started ${1} && echo 'started' || echo 'stopped'
@@ -112,7 +110,6 @@ elif [ ${1} != -a ]; then
 fi
 SVC_ACTION="${2}"
 shift 2
-
 
 if [ ${SVC_NAME} = - ]; then
 	# Special case: -a (turned into ${SVC_NAME} = '-') applies to all services.
@@ -145,7 +142,6 @@ if [ ${SVC_NAME} = - ]; then
 	esac
 	exit 0
 fi
-
 
 case "${SVC_ACTION}" in
 (info)

@@ -1,23 +1,24 @@
 #!/bin/sh
 # -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2012, 2013, 2014
+# Copyright 2012, 2013, 2014, 2017
 # Raffaello D. Di Napoli
 #
 # This file is part of Tinytium.
 #
-# Tinytium is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License as published by the Free Software
-# Foundation, either version 3 of the License, or (at your option) any later
-# version.
+# Tinytium is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option)
+# any later version.
 #
 # Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
-# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 
 # The init program (PID 1).
 
@@ -38,7 +39,6 @@
 #   tym:net.eth0=dhcp
 #   tym:net.eth1=192.168.1.10/24,gw=192.168.1.1
 
-
 # Poor man's sed s///g.
 strsubst() {
    eval local s=\${${1}}
@@ -47,7 +47,6 @@ strsubst() {
    done
    eval ${1}=\${s}
 }
-
 
 info() {
    # 6 = KERN_INFO
@@ -96,7 +95,6 @@ shellonbreak() {
    ${break} && shell "Breaking due to \`tym:break=${1}'."
 }
 
-
 # Basic initial setup.
 
 mount_devtmpfs() {
@@ -105,17 +103,17 @@ mount_devtmpfs() {
    else
       mount -n -t tmpfs -o "exec,nosuid,mode=0755,size=8M" mdev /dev
 
-      # creating /dev/console and /dev/tty1 to be able to write
-      # to $CONSOLE with/without bootsplash before mdev creates it
+      # creating /dev/console and /dev/tty1 to be able to write to $CONSOLE
+      # with/without bootsplash before mdev creates it
       [ -c /dev/console ] || mknod /dev/console c 5 1
       [ -c /dev/tty1 ] || mknod /dev/tty1 c 4 1
 
-      # udevd will dup its stdin/stdout/stderr to /dev/null
-      # and we do not want a file which gets buffered in ram
+      # udevd will dup its stdin/stdout/stderr to /dev/null and we do not want
+      # a file which gets buffered in ram
       [ -c /dev/null ] || mknod /dev/null c 1 3
 
       # copy over any persistant things
-      if [ -d /lib/mdev/devices ] ; then
+      if [ -d /lib/mdev/devices ]; then
          cp -RPp /lib/mdev/devices/* /dev 2>/dev/null
       fi
 
@@ -131,7 +129,6 @@ mount_devtmpfs() {
    fi
 }
 
-
 export PATH=/bin:/sbin
 mount -n -t proc /proc /proc
 mount -n -t sysfs /sys /sys
@@ -139,7 +136,6 @@ mount -n -t devtmpfs -o mode=0755,size=4M devtmpfs /dev
 mkdir /dev/pts
 mount -n -t devpts -o gid=5,mode=620 devpts /dev/pts
 mkdir /dev/disk /dev/disk/by-label /dev/disk/by-uuid
-
 
 # Kernel command line processing functions.
 cmdline_has_flag() {
@@ -160,7 +156,6 @@ cmdline=" ${cmdline} "
 cmdline_has_flag quiet && quiet=true || quiet=false
 info 'loaded, starting boot sequence'
 
-
 # Analyze a few basic options.
 cmdline_arg_value 'tym:break' tym_break
 cmdline_arg_value 'tym:errors' tym_errors || tym_errors=panic
@@ -173,7 +168,6 @@ case "${tym_errors}" in
    ;;
 esac
 shellonbreak cmdline
-
 
 # Find out the root filesystem.
 cmdline_arg_value root || panic 'no root argument provided'
@@ -194,7 +188,6 @@ esac
 # Create the /dev/resume symlink, and remember to wait for it.
 ln -s "${root#/dev/}" /dev/root
 devs_waiting_for_root=true
-
 
 # Determine whether to resume the system from hibernation.
 devs_waiting_for_resume=false
@@ -219,18 +212,17 @@ if ! cmdline_has_flag noresume && cmdline_arg_value resume; then
    devs_waiting_for_resume=true
 fi
 
-
 # Enumerate module aliases for the devices in the system.
 # TODO: parallelism, maybe merge with code below using the output.
 find /sys -name modalias -exec cat \{\} + |
 awk '
    {
       # This merges duplicate lines on top of each other.
-      arrAliases[$0] = 1
+      aliases[$0] = 1
    }
    END {
-      for (sAlias in arrAliases) {
-         print sAlias
+      for (alias in aliases) {
+         print alias
       }
    }
 ' >/modaliases.lst
@@ -249,10 +241,10 @@ while read -r modalias; do
    modprobe ${modalias} 2>/dev/null
 done </modaliases.lst
 
-
 # Wait for devices to come online.
 
-# Uses blkid to detect the type of filesystem in ${1}; returns 0 if successful, or 1 otherwise.
+# Uses blkid to detect the type of filesystem in ${1}; returns 0 if
+# successful, or 1 otherwise.
 detect_fs_type() {
    # Get info on the device block.
    local LABEL= UUID= TYPE= devattrs="$(blkid ${1})"
@@ -270,7 +262,10 @@ cmdline_get_root_mount_opts() {
    cmdline_has_flag rw && baserootflags=rw || baserootflags=ro
    cmdline_arg_value rootflags
    allrootflags=${baserootflags}${rootflags:+,${rootflags}}
-   cmdline_arg_value rootfstype || rootfstype="$(detect_fs_type ${root})" || rootfstype=auto
+
+   cmdline_arg_value rootfstype ||
+   rootfstype="$(detect_fs_type ${root})" ||
+   rootfstype=auto
 }
 
 # Extract the target (recursively resolved) of the /dev/root link into the
@@ -304,8 +299,8 @@ while :; do
    # Check for really quick devices.
    devs_wait_is_over && break
 
-   # One or more devices is not online yet. Let's repeat this for an additional
-   # 10s before calling for user intervention.
+   # One or more devices is not online yet. Let's repeat this for an
+   # additional 10s before calling for user intervention.
    sleep 0.25
    # In messages, give priority to root.
    if ${devs_waiting_for_root}; then
@@ -321,7 +316,8 @@ while :; do
       error "cannot find the ${desc} device" \
          'You can either wait a little longer, if you are sure that' \
          "  ${dev}" \
-         "is the correct ${desc} device and will eventually come online, or you can" \
+         "is the correct ${desc} device and will eventually come online, "\
+            'or you can' \
          "create a symlink from ${link} to the correct device."
       # Now that we're back, resume from the beginning of the loop.
       i=0
@@ -330,7 +326,6 @@ while :; do
       info "waiting for ${dev} ..."
    fi
 done
-
 
 # Try to resume the system.
 shellonbreak resume
@@ -350,7 +345,6 @@ if [ -n "${resume}" ]; then
       ;;
    esac
 fi
-
 
 # Try to mount the root filesystem.
 shellonbreak mount
@@ -398,18 +392,17 @@ if [ -z "${rootflags}" -a -f /newroot/etc/fstab ]; then
       # If there are still any options left, use them.
       if [ -n "${rootflags}" ]; then
          allrootflags=${baserootflags},${rootflags}
-         info "remounting ${root} (type: ${rootfstype}, options: ${allrootflags})"
+         info "remounting ${root} (type: ${rootfstype}, options: "\
+            "${allrootflags})"
          umount /newroot
-         if ! mount -n -t ${rootfstype} -o "${allrootflags}" "${root}" /newroot; then
+         mount -n -t ${rootfstype} -o "${allrootflags}" "${root}" /newroot ||
             error "unable to remount ${root} as root" \
                'You will have to remount it manually.'
-         fi
       fi
    }
 
    remount_root_per_fstab
 fi
-
 
 # Check for init.
 shellonbreak pre-init
@@ -450,10 +443,10 @@ mdev_quit() {
 
 mdev_quit
 
-
 shellonbreak init
 
-# Generates the command line for /sbin/init by filtering the one for the kernel.
+# Generates the command line for /sbin/init by filtering the one for the
+# kernel.
 get_init_args() {
    local arg
    for arg; do

@@ -1,22 +1,23 @@
 #!/bin/sh
 # -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2012, 2014 Raffaello D. Di Napoli
+# Copyright 2012, 2014, 2017 Raffaello D. Di Napoli
 #
 # This file is part of Tinytium.
 #
-# Tinytium is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License as published by the Free Software
-# Foundation, either version 3 of the License, or (at your option) any later
-# version.
+# Tinytium is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option)
+# any later version.
 #
 # Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
-# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 
 # Network adapter configurator, accessory to BusyBox's udhcpc.
 
@@ -34,15 +35,14 @@ bc=${broadcast}
 gateways="${router}"
 nameservers="${dns}"
 
-
 resolvconf_clean() {
    awk '
       $0 == "# By udhcpc ('${itf}')" {
-         bSkip = 1
+         skip = 1
       }
-      !bSkip
+      !skip
       $0 == "# End udhcpc ('${itf}')" {
-         bSkip = 0
+         skip = 0
       }
    ' </etc/resolv.conf
 }
@@ -55,7 +55,6 @@ resolvconf_replace() {
    fi
 }
 
-
 case ${1} in
 (deconfig)
    ifconfig ${itf} 0.0.0.0
@@ -66,7 +65,7 @@ case ${1} in
    ;;
 (bound|renew)
    ifconfig ${itf} ${ip} ${subnet:+netmask ${subnet}} ${bc:+broadcast +${bc}}
-   if [ -n "${gateways}" ] ; then
+   if [ -n "${gateways}" ]; then
       while route del default gw 0.0.0.0 dev ${itf} 2>/dev/null; do
          :
       done

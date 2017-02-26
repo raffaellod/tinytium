@@ -1,21 +1,22 @@
 # -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2012, 2014 Raffaello D. Di Napoli
+# Copyright 2012, 2014, 2017 Raffaello D. Di Napoli
 #
 # This file is part of Tinytium.
 #
-# Tinytium is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License as published by the Free Software
-# Foundation, either version 3 of the License, or (at your option) any later
-# version.
+# Tinytium is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option)
+# any later version.
 #
 # Tinytium is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
-# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # You should have received a copy of the GNU General Public License along with
 # Tinytium. If not, see <http://www.gnu.org/licenses/>.
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 
 # Service script to initialize/uninitialize the network. It obtains its
 # configuration from the kernel command line.
@@ -24,15 +25,13 @@
 SVC_DESC='Manages the network connections listed in /etc/svc/net'
 SVC_NEEDS='syslogd'
 
-
 # Enums every non-loopback interface.
 ifenum() {
    sed -ne '/^[\t ]*lo:/ ! s/:.*$//p' </proc/net/dev
 }
 
-
-# Determines a configured address type, distinguishing among "dhcp", ip/netmask,
-# possibly others.
+# Determines a configured address type, distinguishing among "dhcp",
+# ip/netmask, possibly others.
 addrtype() {
    echo "${1}" |
    sed -re '
@@ -45,7 +44,6 @@ addrtype() {
       c error
    '
 }
-
 
 # Calculates a netmask from a CIDR address.
 cidr2netmask() {
@@ -64,26 +62,23 @@ cidr2netmask() {
    echo ${nm#.}
 }
 
-
-
-
 svc_initconfig() {
    # See /init for the format of the tym:net.* kernel parameter.
    sed -e 's/ /\n/g' </proc/cmdline |
-   awk -F, -v sQ=\' '
+   awk -F, -vquote=\' '
       /^tym:net\./ {
-         sSrcLine = $0
+         src_line = $0
          sub(/^tym:net\./, "")
-         if (!match($0, /^[0-9A-Za-z]+=/))
+         if (!match($0, /^[0-9A-Za-z]+=/)) {
             next
-         sItf = substr($0, 1, RLENGTH - 1)
+         }
+         itf = substr($0, 1, RLENGTH - 1)
          $0 = substr($0, RLENGTH + 1)
-         print "# Generated from " sSrcLine
-         print sItf "=" sQ $1 sQ
+         print "# Generated from " src_line
+         print itf "=" quote $1 quote
       }
    ' >${1}
 }
-
 
 svc_start() {
    local conf_itf oneup=false
@@ -115,7 +110,6 @@ svc_start() {
    ${oneup} ||
       ldie 'no interface configuration found'
 }
-
 
 svc_stop() {
    local conf_itf=
