@@ -31,14 +31,9 @@ svc_initconfig() {
       s=$(fgconsole)
       echo "def_vt=${s}"
 
-      s=$(awk '
-         BEGIN {
-            vt = "12"
-         }
-         {
-            if (match(" " $0 " ", / tym:logvt=[0-9]* /)) {
-               vt = substr($0, RSTART + 9, RLENGTH - 10)
-            }
+      s=$(awk -vvt=12 '
+         match(" " $0 " ", / tym:logvt=[0-9]* /)) {
+            vt = substr($0, RSTART + 9, RLENGTH - 10)
          }
          END {
             print vt
