@@ -73,7 +73,6 @@ svc_initconfig() {
             next
          }
          itf = substr($0, 1, RLENGTH - 1)
-         $0 = substr($0, RLENGTH + 1)
          print "# Generated from " src_line
          print itf "=" quote $1 quote
       }
