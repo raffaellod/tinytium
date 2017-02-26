@@ -28,11 +28,7 @@ svc_initconfig() {
    info 'generating host keys'
    [ -d /etc/dropbear ] || mkdir /etc/dropbear
    for k in dss rsa; do
-      if ! dropbearkey -t ${k} \
-         -f /etc/dropbear/dropbear_${k}_host_key >/dev/null
-      then
-         return 1
-      fi
+      dropbearkey -t ${k} -f /etc/dropbear/dropbear_${k}_host_key >/dev/null
    done
    # No configuration to store, really.
    : >${1}
