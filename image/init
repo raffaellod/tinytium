@@ -82,17 +82,14 @@ shell() {
 }
 
 shellonbreak() {
-   local break
    if [ "${tym_break#${1},}" != "${tym_break}" ]; then
       tym_break="${tym_break#${1},}"
-      break=true
    elif [ "${tym_break}" = ${1} ]; then
       tym_break=
-      break=true
    else
-      break=false
+      return
    fi
-   ${break} && shell "Breaking due to \`tym:break=${1}'."
+   shell "Breaking due to \`tym:break=${1}'."
 }
 
 # Basic initial setup.
