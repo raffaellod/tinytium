@@ -627,7 +627,7 @@ while [ -n "${scandeps}" ]; do
    # Get a list of dependencies of (current level) dependencies, omitting any
    # libraries already accounted for.
    scandeps=$(
-      "${CROSS_COMPILE}readelf" -dlW ${scandeps} |
+      env LANG=C "${CROSS_COMPILE}readelf" -dlW ${scandeps} |
       awk -vdeps="${deps}" -vld_path="${rooted_libpath}" '
          function whichlib(lib) {
             # Check the cache first.
