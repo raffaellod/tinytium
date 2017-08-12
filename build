@@ -441,9 +441,9 @@ adjconfig_busybox() {
          # config goes last, to override applets.
          config = applets "\n" config
          # Split on newlines.
-         split(config, config, /\n+/)
-         for (i in config) {
-            s = config[i]
+         split(config, config_array, /\n+/)
+         for (i in config_array) {
+            s = config_array[i]
             # Trim whitespace on both sides of the string.
             sub(/^[[:space:]]+/, "", s)
             sub(/[[:space:]]+$/, "", s)
@@ -498,9 +498,9 @@ adjconfig_dropbear() {
       BEGIN {
          sub(/^[[:space:]]+/, "", config)
          sub(/[[:space:]]+$/, "", config)
-         split(config, config, /[[:space:]]+/)
-         for (i in config) {
-            s = config[i]
+         split(config, config_array, /[[:space:]]+/)
+         for (i in config_array) {
+            s = config_array[i]
             disable = sub(/^-/, "", s)
             if (!disable) {
                print "#define " s
@@ -590,18 +590,18 @@ bins=$(
          sub(/[[:space:]]+$/, "", bins)
          split(bins, bin_names, /[[:space:]]+/)
          for (i in bin_names) {
-            bins[bin_names[i]] = 1
+            bins_array[bin_names[i]] = 1
          }
       }
       # Remove binaries included in BB.
       {
-         delete bins[$0]
+         delete bins_array[$0]
       }
       END {
          # Output a new binary list.
-         for (bin in bins) {
+         for (bin in bins_array) {
             # Print type and name.
-            print bins[bin] " " bin
+            print bins_array[bin] " " bin
          }
       }
    ' |
@@ -671,7 +671,7 @@ while [ -n "${scandeps}" ]; do
             sub(/[[:space:]]+$/, "", deps)
             split(deps, dep_names, /[[:space:]]+/)
             for (i in dep_names) {
-               deps[dep_names[i]] = 1
+               deps_array[dep_names[i]] = 1
             }
          }
          {
@@ -691,7 +691,7 @@ while [ -n "${scandeps}" ]; do
             }
             s = whichlib(s)
             # If it is a new dependency, add it to the list.
-            if (s in deps) {
+            if (s in deps_array) {
                next
             }
             scan_deps[s] = 1
@@ -701,7 +701,7 @@ while [ -n "${scandeps}" ]; do
             close(readlink)
             # If s was a symlink, skip it if its target has been added
             # already; if it was not, this test will always be true.
-            if (s in deps) {
+            if (s in deps_array) {
                next
             }
             scan_deps[s] = 1
