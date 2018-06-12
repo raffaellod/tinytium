@@ -212,9 +212,9 @@ bins_disk_extfs='
    chattr
    debugfs dumpe2fs
    e2freefrag e2fsck e2image e2label e2undo
-   filefrag fsck.ext2 fsck.ext3 fsck.ext4 fsck.ext4dev
+   filefrag fsck.ext2 fsck.ext3 fsck.ext4
    logsave lsattr
-   mke2fs mkfs.ext2 mkfs.ext3 mkfs.ext4 mkfs.ext4dev mklost+found
+   mke2fs mkfs.ext2 mkfs.ext3 mkfs.ext4 mklost+found
    resize2fs
    tune2fs
 '
@@ -716,7 +716,6 @@ while [ -n "${scandeps}" ]; do
                   ver = substr(s, RSTART + 6, RLENGTH - 6 - 3)
                   sub(/[^\/]*$/, "", s)
                   # Add these basic backends.
-                  addwithsoname(s, "libnss_compat-" ver ".so")
                   addwithsoname(s, "libnss_dns-"    ver ".so")
                   addwithsoname(s, "libnss_files-"  ver ".so")
                }
