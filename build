@@ -201,6 +201,7 @@ busybox_config='
    # POSIX math support
    SH_MATH_SUPPORT
    -START_STOP_DAEMON
+   -SVC
    # Use internal password and group functions rather than system functions
    -USE_BB_PWD_GRP
    # volumeid
