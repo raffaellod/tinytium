@@ -1,7 +1,7 @@
 #!/bin/sh
 # -*- coding: utf-8; mode: sh; tab-width: 3; indent-tabs-mode: nil -*-
 #
-# Copyright 2012, 2013, 2014, 2017
+# Copyright 2012-2014, 2017-2018
 # Raffaello D. Di Napoli
 #
 # This file is part of Tinytium.
@@ -308,7 +308,8 @@ while :; do
       desc='hibernation image'
    fi
    dev=$(readlink ${link})
-   if [ $((++${i})) -eq 40 ]; then
+   i=$((i + 1))
+   if [ ${i} -eq 40 ]; then
       # Number of attempts exceeded.
       error "cannot find the ${desc} device" \
          'You can either wait a little longer, if you are sure that' \
@@ -318,7 +319,7 @@ while :; do
          "create a symlink from ${link} to the correct device."
       # Now that we're back, resume from the beginning of the loop.
       i=0
-   elif [ $((${i} % 12)) -eq 0 ]; then
+   elif [ $((i % 12)) -eq 0 ]; then
       # Print something every now and then (3s).
       info "waiting for ${dev} ..."
    fi
