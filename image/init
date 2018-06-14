@@ -144,7 +144,7 @@ cmdline_arg_value() {
       eval ${2:-${1}}=\${tail%% *}
       return 0
    else
-      unset ${1}
+      eval ${2:-${1}}=
       return 1
    fi
 }
