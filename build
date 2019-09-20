@@ -563,8 +563,13 @@ which=$(which which)
 cd "${tym_work}"
 rooted_path="${tym_root}usr/bin:${tym_root}usr/sbin:${tym_root}bin:"\
 "${tym_root}sbin"
-rooted_libpath="${tym_root}usr/lib:${tym_root}lib:${tym_parent}usr/lib:"\
-"${tym_parent}lib"
+rooted_libpath="${tym_root}usr/lib:${tym_root}lib"
+if [ ${ARCH} = x86_64 ]; then
+   rooted_libpath="${rooted_libpath}:${tym_parent}usr/lib64:"\
+"${tym_parent}lib64"
+else
+   rooted_libpath="${rooted_libpath}:${tym_parent}usr/lib:${tym_parent}lib"
+fi
 
 ebegin 'Creating directories'
 [ ${ARCH} = x86_64 ] && ln -s lib lib64
